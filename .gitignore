@@ -1,0 +1,29 @@
+# Gradle & Build Artifacts
+.gradle/
+build/
+app/build/
+*.apk
+*.aab
+.kotlin/
+/captures
+*.hprof
+.externalNativeBuild
+.cxx
+
+# IDE & OS Files
+.idea/
+*.iml
+.DS_Store
+Thumbs.db
+
+# Sensitive Local Properties & Keystore Credentials
+local.properties
+/local.properties
+keystore.properties
+*.jks
+*.keystore
+
+# Internal Security Guides & Private Data
+RELEASE_GUIDE.md
+Backup_*.json
+modelo.jpg
