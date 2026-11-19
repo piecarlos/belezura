@@ -63,19 +63,24 @@ adb shell am start -n com.salu.calendario.v2/com.salu.calendario.MainActivity
 app/src/main/
 ├── AndroidManifest.xml
 ├── java/com/salu/calendario/
-│   ├── MainActivity.kt          # Activity raiz, navegação (AppScreen), scaffolding e painel de ajuste
+│   ├── MainActivity.kt          # Activity raiz, viewModels, launchers SAF, navegação entre telas e hosts
 │   ├── HomeScreen.kt            # Tela inicial, card do mês ativo, busca de clientes e atalhos
+│   ├── EditorScreen.kt          # Tela principal do editor (TopAppBar, preview Canvas 9:16 e barra inferior)
+│   ├── LayoutAdjustPanel.kt     # Painel "Ajustar Layout e Cores" (abas, sub-abas, sliders e seletor de cores)
+│   ├── DayEditSheet.kt          # ModalBottomSheet de edição do dia (nomes + toggle "X" vermelho)
+│   ├── EditorDialogs.kt         # Diálogos auxiliares (MonthYearPicker, confirmação de restauração)
+│   ├── CustomBackgroundDialog.kt# Modal de orientação prévia e seleção de imagem para moldura
 │   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, busca e ações
 │   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview e exportação)
 │   ├── CalendarEngine.kt        # Cálculos de calendário, deslocamentos, nomes pt-BR e grid
 │   ├── CalendarModels.kt        # Modelos imutáveis (CellData, EditableElement, AppScreen, etc.)
 │   ├── LayoutConfig.kt          # Configuração geométrica e visual com serialização/deserialização JSON
 │   ├── BackupManager.kt         # Exportação/importação de backup (.json) SAF
-│   ├── BackgroundManager.kt     # Carregamento seguro da imagem de fundo base e customizada
+│   ├── BackgroundManager.kt     # Decodificador ImageDecoder/BitmapFactory e zoom central 1080×1920
 │   ├── FontManager.kt           # Gerenciador e cache de Typefaces embutidas
 │   └── ExportHelper.kt          # Renderização offscreen 1080×1920, salvamento MediaStore e FileProvider
 └── res/
-    ├── drawable-nodpi/bg_base.png   # Fundo base limpo oficial em 1080×1920 (sem upscaling)
+    ├── drawable-nodpi/bg_base.webp # Fundo base limpo oficial em 1080×1920 (~47 KB, otimizado)
     ├── font/                        # Fontes TrueType estáticas embutidas
     │   ├── cinzel_bold.ttf
     │   ├── fredoka_bold.ttf
@@ -88,15 +93,20 @@ app/src/main/
 
 | Arquivo | Responsabilidade Exata |
 |---|---|
-| **`MainActivity.kt`** | Ponto de entrada (`ComponentActivity`). Gerencia `BackHandler` contextual, transição entre `HomeScreen` e editor do calendário, `LayoutAdjustmentPanel` (zero rolagem com abas `Mês`, `Ano`, `Calendário` e sub-abas `Posição`, `Fonte`, `Cor`), `CellEditBottomSheet` e diálogos do sistema. |
+| **`MainActivity.kt`** | Ponto de entrada (`ComponentActivity`). Enxuto (~275 linhas), gerencia launchers de arquivos SAF (`CreateDocument`, `OpenDocument`, `PickVisualMedia`, permissões), navegação entre `HomeScreen` e `EditorScreen`, `BackHandler` e host de Snackbar. |
 | **`HomeScreen.kt`** | Painel inicial rápido. Hero card com contadores dinâmicos de agendamentos e dias com "X", botão rápido para compartilhar PNG sem abrir editor, busca global de clientes, carrossel "Meus Meses" (`LazyRow`) e atalhos de "Aparência e Backup". |
+| **`EditorScreen.kt`** | Tela principal do editor. Contém o `Scaffold`, `TopAppBar` (Undo/Redo, navegação de mês, botão de ajuste, atalho de moldura e menu de backup), `CalendarCanvasView` com gestos de toque/arraste sincronizados e barra inferior de Salvar PNG / Compartilhar. |
+| **`LayoutAdjustPanel.kt`** | Painel modular de ajuste visual (zero rolagem). Abas de elemento (`Mês`, `Ano`, `Calendário`), sub-abas de ferramenta (`Posição`, `Fonte`, `Cor`), sliders, botões finos e diálogo de cor customizada (`CustomColorPickerDialog`). |
+| **`DayEditSheet.kt`** | `ModalBottomSheet` de edição do dia. Permite alternar o "X" vermelho de dia indisponível, adicionar/remover clientes, reordenar prioridades e autocompletar. |
+| **`EditorDialogs.kt`** | Diálogos modais do editor: `MonthYearPickerDialog` (seletor rápido de mês/ano) e `ConfirmRestoreDialog` (confirmação atômica de restauração). |
+| **`CustomBackgroundDialog.kt`** | Modal de orientação prévia antes do upload da moldura (recomenda formato 9:16 vertical e explica ajuste central automático). |
 | **`CalendarViewModel.kt`** | Gerenciamento de estado (`CalendarUiState`), pilhas de Undo/Redo com snapshots de células, motor de busca sem acento (`ClientSearchHelper`), navegação de meses, ajuste fino de layout com arraste 2D e acionamento de exportação assíncrona. |
 | **`CalendarRenderer.kt`** | Motor gráfico Canvas. Desenha fundo, texto do mês, ano 3D com 4 camadas de relevo/sombra e traço curvo (*swoosh*), cartão e grade do calendário, letras dos dias da semana, numerais, "X" vermelho centralizado, algoritmo de auto-fit de nomes em 2 passos e bounding boxes tracejadas em modo de edição. |
 | **`CalendarEngine.kt`** | Lógica de datas baseada em `java.time.YearMonth`. Mapeamento de domingo como início de semana (padrão brasileiro `value % 7`), contagem dinâmica de semanas (5 ou 6 linhas) e geração das células do grid. |
 | **`CalendarModels.kt`** | Definições de `CellData` (slot, dia, hasRedX, lista de nomes), `MonthData`, `EditableElement` (`NONE`, `MONTH`, `YEAR`, `GRID_CARD`), `AppScreen` (`HOME`, `CALENDAR`), `MonthSummary` e `ClientSearchResult`. |
 | **`LayoutConfig.kt`** | Armazena escalas, cores hexadecimais, fontes e coordenadas absolutas/offsets (`monthX`, `monthY`, `monthOffsetX`, `monthOffsetY`, `yearX`, `yearY`, `yearOffsetX`, `yearOffsetY`, `cardOffsetX`, `cardOffsetY`, `cardScale`, `cardAccentColor`). Garante compatibilidade retroativa via fallbacks `optDouble`. |
 | **`BackupManager.kt`** | Gera e consome backups universais em JSON estruturado (`SCHEMA_VERSION = 1`). Limpa e restaura atomicamente o `SharedPreferences` preservando integridade referencial. Formata data do último backup (`last_backup_at`). |
-| **`BackgroundManager.kt`** | Decodifica `res/drawable-nodpi/bg_base.png` com `inScaled = false` para manter a escala 1:1. Processa fundos customizados da galeria com downsampling de memória e rotação EXIF. |
+| **`BackgroundManager.kt`** | Decodifica `res/drawable-nodpi/bg_base.webp` com `inScaled = false` para manter a escala 1:1. Processa fundos customizados com `ImageDecoder` (software allocator) e fallback `BitmapFactory` com corte central (*center-crop* 1080×1920). |
 | **`FontManager.kt`** | Cache de fontes embutidas (`CINZEL_BOLD`, `FREDOKA_BOLD`, `PLAYFAIR_DISPLAY_BOLD`, `DEFAULT`). Usa referências diretas `R.font.*` para proteção total contra o R8. |
 | **`ExportHelper.kt`** | Renderiza a imagem em um `Bitmap` ARGB_8888 de `1080×1920`, salva na galeria através do `MediaStore` (com verificação de permissões para API ≤ 28) e compartilha via `Intent.ACTION_SEND` e `FileProvider`. |
 
@@ -125,7 +135,7 @@ Ao realizar qualquer alteração futura, respeite obrigatoriamente as seguintes 
    - O `AndroidManifest.xml` utiliza `android:authorities="${applicationId}.fileprovider"`.
    - O `ExportHelper.kt` deve invocar `FileProvider.getUriForFile` com `"${context.packageName}.fileprovider"`. Isso permite que versões de teste rodem lado a lado sem conflito de autoridade de provedor.
 8. **Decodificação de Bitmaps em 1:1:**
-   - Bitmaps embutidos devem residir em `drawable-nodpi` e ser decodificados com `BitmapFactory.Options().apply { inScaled = false }` para evitar upscaling automático por densidade de tela (`xxxhdpi`).
+   - Bitmaps embutidos (como `res/drawable-nodpi/bg_base.webp`) devem residir em `drawable-nodpi` e ser decodificados com `BitmapFactory.Options().apply { inScaled = false }` ou `ImageDecoder` para evitar upscaling automático por densidade de tela (`xxxhdpi`), preservando a resolução nativa de `1080×1920`.
 9. **Zero Dependências Pesadas e Zero Permissão de Internet:**
    - Não adicione Room, SQLite, Ktor ou Retrofit. Mantenha persistência leve via `SharedPreferences`. Não solicite `android.permission.INTERNET` enquanto o aplicativo operar em modo local.
 
