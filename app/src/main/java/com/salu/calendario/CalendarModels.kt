@@ -18,7 +18,8 @@ enum class EditableElement {
     NONE,
     MONTH,
     YEAR,
-    GRID_CARD
+    GRID_CARD,
+    LOGO
 }
 
 enum class AppScreen {

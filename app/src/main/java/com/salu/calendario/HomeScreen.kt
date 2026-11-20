@@ -100,7 +100,8 @@ fun HomeScreen(
     onRestoreDefaultBackground: () -> Unit,
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
-    onOpenQuickDatePicker: () -> Unit
+    onOpenQuickDatePicker: () -> Unit,
+    onOpenThemeGallery: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -524,12 +525,17 @@ fun HomeScreen(
                         }
                     }
 
-                    // Background Card
+                    // Background & Themes Card
                     Box(modifier = Modifier.weight(1f)) {
+                        val currentThemeName = remember(uiState.layoutConfig.selectedThemeId) {
+                            ThemeCatalog.getThemeById(uiState.layoutConfig.selectedThemeId)?.name ?: "Floral Clássico"
+                        }
+                        val themeSubtitle = if (uiState.hasCustomBackground) "Foto personalizada" else currentThemeName
+
                         Card(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .clickable { showBgDialog = true },
+                                .clickable { onOpenThemeGallery() },
                             colors = CardDefaults.cardColors(containerColor = Color.White),
                             shape = RoundedCornerShape(12.dp),
                             border = CardDefaults.outlinedCardBorder()
@@ -548,26 +554,12 @@ fun HomeScreen(
                                 }
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = if (uiState.hasCustomBackground) "Moldura personalizada" else "Tema floral padrão",
+                                    text = themeSubtitle,
                                     fontSize = 11.sp,
-                                    color = Color.Gray
+                                    color = Color.Gray,
+                                    maxLines = 1
                                 )
                             }
-                        }
-
-                        if (showBgDialog) {
-                            CustomBackgroundDialog(
-                                hasCustomBackground = uiState.hasCustomBackground,
-                                onDismiss = { showBgDialog = false },
-                                onPickImage = {
-                                    photoPickerLauncher.launch(
-                                        PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                                    )
-                                },
-                                onRestoreDefault = {
-                                    onRestoreDefaultBackground()
-                                }
-                            )
                         }
                     }
                 }

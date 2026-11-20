@@ -30,7 +30,15 @@ data class LayoutConfig(
     val cardScale: Float = 1.0f,
     val cardOffsetX: Float = 0f,
     val cardOffsetY: Float = 0f,
-    val cardAccentColor: Int = 0xFFE89BAE.toInt() // Default: #E89BAE
+    val cardAccentColor: Int = 0xFFE89BAE.toInt(), // Default: #E89BAE
+
+    // Theme selection and Logo configuration (Phase A)
+    val selectedThemeId: String = "floral_default",
+    val logoEnabled: Boolean = false,
+    val logoMode: String = "ORIGINAL",
+    val logoScale: Float = 1.0f,
+    val logoOffsetX: Float = 0f,
+    val logoOffsetY: Float = 0f
 ) {
     fun toJson(): String {
         val json = JSONObject()
@@ -58,6 +66,13 @@ data class LayoutConfig(
         json.put("cardOffsetX", cardOffsetX.toDouble())
         json.put("cardOffsetY", cardOffsetY.toDouble())
         json.put("cardAccentColor", String.format("#%08X", cardAccentColor))
+
+        json.put("selectedThemeId", selectedThemeId)
+        json.put("logoEnabled", logoEnabled)
+        json.put("logoMode", logoMode)
+        json.put("logoScale", logoScale.toDouble())
+        json.put("logoOffsetX", logoOffsetX.toDouble())
+        json.put("logoOffsetY", logoOffsetY.toDouble())
         return json.toString()
     }
 
@@ -97,6 +112,10 @@ data class LayoutConfig(
                 val yOffX = json.optDouble("yearOffsetX", (yX - 540.0)).toFloat()
                 val yOffY = json.optDouble("yearOffsetY", (yY - 225.0)).toFloat()
 
+                val themeId = json.optString("selectedThemeId", "floral_default").let {
+                    if (it.isBlank()) "floral_default" else it
+                }
+
                 LayoutConfig(
                     monthX = mX,
                     monthY = mY,
@@ -129,7 +148,14 @@ data class LayoutConfig(
                     cardScale = json.optDouble("cardScale", 1.0).toFloat(),
                     cardOffsetX = json.optDouble("cardOffsetX", 0.0).toFloat(),
                     cardOffsetY = json.optDouble("cardOffsetY", 0.0).toFloat(),
-                    cardAccentColor = parseColorSafe(json.optString("cardAccentColor"), 0xFFE89BAE.toInt())
+                    cardAccentColor = parseColorSafe(json.optString("cardAccentColor"), 0xFFE89BAE.toInt()),
+
+                    selectedThemeId = themeId,
+                    logoEnabled = json.optBoolean("logoEnabled", false),
+                    logoMode = json.optString("logoMode", "ORIGINAL"),
+                    logoScale = json.optDouble("logoScale", 1.0).toFloat(),
+                    logoOffsetX = json.optDouble("logoOffsetX", 0.0).toFloat(),
+                    logoOffsetY = json.optDouble("logoOffsetY", 0.0).toFloat()
                 )
             } catch (e: Exception) {
                 DEFAULT
@@ -139,7 +165,8 @@ data class LayoutConfig(
         private fun parseColorSafe(colorStr: String?, defaultColor: Int): Int {
             if (colorStr.isNullOrBlank()) return defaultColor
             return try {
-                Color.parseColor(colorStr)
+                val clean = colorStr.removePrefix("#")
+                clean.toLong(16).toInt()
             } catch (e: Exception) {
                 defaultColor
             }

@@ -75,7 +75,8 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
     val snackbarHostState = remember { SnackbarHostState() }
 
     var showDatePickerDialog by rememberSaveable { mutableStateOf(false) }
-    var showBgDialog by rememberSaveable { mutableStateOf(false) }
+    var showThemeGallerySheet by rememberSaveable { mutableStateOf(false) }
+    var showLogoSettingsDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestoreConfirmDialog by rememberSaveable { mutableStateOf(false) }
 
@@ -107,6 +108,14 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
     ) { uri ->
         if (uri != null) {
             viewModel.onCustomBackgroundPicked(uri)
+        }
+    }
+
+    val logoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri ->
+        if (uri != null) {
+            viewModel.onLogoPicked(uri)
         }
     }
 
@@ -157,7 +166,8 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onRestoreDefaultBackground = { viewModel.onRestoreDefaultBackground() },
                     onExportBackup = launchExportBackup,
                     onImportBackup = launchImportBackup,
-                    onOpenQuickDatePicker = { showDatePickerDialog = true }
+                    onOpenQuickDatePicker = { showDatePickerDialog = true },
+                    onOpenThemeGallery = { showThemeGallerySheet = true }
                 )
             }
             AppScreen.CALENDAR -> {
@@ -175,7 +185,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onUndo = { viewModel.undo() },
                     onRedo = { viewModel.redo() },
                     onToggleEditMode = { viewModel.toggleEditMode() },
-                    onOpenBgDialog = { showBgDialog = true },
+                    onOpenBgDialog = { showThemeGallerySheet = true },
                     onExportBackup = launchExportBackup,
                     onImportBackup = launchImportBackup,
                     onRequestStoragePermission = {
@@ -194,7 +204,15 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onCardAccentColorChange = { color -> viewModel.updateCardAccentColor(color) },
                     onStepElementOffset = { element, dx, dy -> viewModel.stepElementOffset(element, dx, dy) },
                     onCenterElementX = { element -> viewModel.centerElementX(element) },
-                    onResetLayout = { viewModel.resetLayout() }
+                    onResetLayout = { viewModel.resetLayout() },
+                    onUploadLogo = {
+                        logoPickerLauncher.launch(
+                            androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                        )
+                    },
+                    onToggleLogoEnabled = { viewModel.toggleLogoEnabled(it) },
+                    onLogoModeChange = { viewModel.updateLogoMode(it) },
+                    onClearLogo = { viewModel.clearLogo() }
                 )
             }
         }
@@ -257,19 +275,54 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
         )
     }
 
-    // Modal de orientação antes do upload da moldura personalizada
-    if (showBgDialog) {
-        CustomBackgroundDialog(
+    // Theme Gallery BottomSheet (Phase A)
+    if (showThemeGallerySheet) {
+        ThemeGallerySheet(
+            currentThemeId = uiState.layoutConfig.selectedThemeId,
             hasCustomBackground = uiState.hasCustomBackground,
-            onDismiss = { showBgDialog = false },
-            onPickImage = {
+            hasCustomLogo = uiState.hasCustomLogo,
+            onSelectTheme = { theme ->
+                viewModel.selectTheme(theme)
+            },
+            onPickCustomBackground = {
                 photoPickerLauncher.launch(
                     androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
                 )
             },
-            onRestoreDefault = {
+            onResetToDefaultBackground = {
                 viewModel.onRestoreDefaultBackground()
-            }
+            },
+            onOpenLogoSettings = {
+                showThemeGallerySheet = false
+                showLogoSettingsDialog = true
+            },
+            onDismiss = { showThemeGallerySheet = false }
+        )
+    }
+
+    // Logo Settings Dialog (Phase A)
+    if (showLogoSettingsDialog) {
+        LogoSettingsDialog(
+            hasCustomLogo = uiState.hasCustomLogo,
+            logoEnabled = uiState.layoutConfig.logoEnabled,
+            logoMode = uiState.layoutConfig.logoMode,
+            onUploadClick = {
+                logoPickerLauncher.launch(
+                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                )
+            },
+            onToggleEnabled = { viewModel.toggleLogoEnabled(it) },
+            onModeChange = { viewModel.updateLogoMode(it) },
+            onClearClick = { viewModel.clearLogo() },
+            onDismiss = { showLogoSettingsDialog = false }
+        )
+    }
+
+    // Honest PRO Preview Transparency Dialog
+    uiState.proPreviewTheme?.let { proTheme ->
+        ProPreviewDialog(
+            theme = proTheme,
+            onDismiss = { viewModel.dismissProPreview() }
         )
     }
 }

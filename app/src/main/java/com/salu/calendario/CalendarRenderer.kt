@@ -8,6 +8,8 @@ import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffXfermode
 import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
@@ -46,8 +48,8 @@ object CalendarRenderer {
         selectedElement: EditableElement = EditableElement.NONE,
         bgBitmapOverride: Bitmap? = null
     ) {
-        // 1. Draw Background
-        val bgBitmap = bgBitmapOverride ?: BackgroundManager.getBackgroundBitmap(context)
+        // 1. Draw Background (from ThemeCatalog or override)
+        val bgBitmap = bgBitmapOverride ?: ThemeCatalog.getThemeBitmap(context, layoutConfig.selectedThemeId)
         srcRect.set(0, 0, bgBitmap.width, bgBitmap.height)
         dstRect.set(0f, 0f, VIRTUAL_WIDTH, VIRTUAL_HEIGHT)
         canvas.drawBitmap(bgBitmap, srcRect, dstRect, bgPaint)
@@ -101,7 +103,13 @@ object CalendarRenderer {
             layoutConfig = layoutConfig
         )
 
-        // 5. Draw Edit Mode outlines if enabled
+        // 5. Draw Logo (if enabled and loaded)
+        val logoBitmap = if (layoutConfig.logoEnabled) LogoManager.getLogoBitmap(context) else null
+        if (layoutConfig.logoEnabled && logoBitmap != null) {
+            drawLogo(canvas, logoBitmap, layoutConfig)
+        }
+
+        // 6. Draw Edit Mode outlines if enabled
         if (isEditMode) {
             drawEditModeHighlights(
                 canvas = canvas,
@@ -113,7 +121,8 @@ object CalendarRenderer {
                 yearText = yearText,
                 yearTextSize = yearTextSize,
                 monthTypeface = monthTypeface,
-                yearTypeface = yearTypeface
+                yearTypeface = yearTypeface,
+                logoBitmap = logoBitmap
             )
         }
     }
@@ -491,6 +500,67 @@ object CalendarRenderer {
         canvas.drawRoundRect(cardRect, cornerRadius, cornerRadius, strokePaint)
     }
 
+    fun calculateLogoBounds(layoutConfig: LayoutConfig, logoWidth: Int, logoHeight: Int): RectF {
+        val aspect = if (logoHeight > 0) logoWidth.toFloat() / logoHeight.toFloat() else 1f
+        val targetH = 170f * layoutConfig.logoScale
+        val targetW = targetH * aspect
+        val centerX = 540f + layoutConfig.logoOffsetX
+        val centerY = 1750f + layoutConfig.logoOffsetY
+        return RectF(
+            centerX - targetW / 2f,
+            centerY - targetH / 2f,
+            centerX + targetW / 2f,
+            centerY + targetH / 2f
+        )
+    }
+
+    private fun drawLogo(canvas: Canvas, logoBitmap: Bitmap, layoutConfig: LayoutConfig) {
+        val bounds = calculateLogoBounds(layoutConfig, logoBitmap.width, logoBitmap.height)
+        srcRect.set(0, 0, logoBitmap.width, logoBitmap.height)
+
+        when (layoutConfig.logoMode) {
+            "REMOVE_WHITE" -> {
+                val multiplyPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.FILTER_BITMAP_FLAG).apply {
+                    xfermode = PorterDuffXfermode(PorterDuff.Mode.MULTIPLY)
+                }
+                canvas.drawBitmap(logoBitmap, srcRect, bounds, multiplyPaint)
+            }
+            "CIRCLE_BADGE" -> {
+                val radius = max(bounds.width(), bounds.height()) / 2f + 10f
+                val centerX = bounds.centerX()
+                val centerY = bounds.centerY()
+
+                // Badge circular background
+                fillPaint.reset()
+                fillPaint.isAntiAlias = true
+                fillPaint.color = Color.WHITE
+                canvas.drawCircle(centerX, centerY, radius, fillPaint)
+
+                // Badge border
+                strokePaint.reset()
+                strokePaint.isAntiAlias = true
+                strokePaint.style = Paint.Style.STROKE
+                strokePaint.color = layoutConfig.cardAccentColor
+                strokePaint.strokeWidth = 3f
+                canvas.drawCircle(centerX, centerY, radius, strokePaint)
+
+                // Clipped logo
+                canvas.save()
+                clipPath.reset()
+                clipPath.addCircle(centerX, centerY, radius - 2f, Path.Direction.CW)
+                canvas.clipPath(clipPath)
+                canvas.drawBitmap(logoBitmap, srcRect, bounds, bgPaint)
+                canvas.restore()
+            }
+            else -> { // ORIGINAL
+                bgPaint.reset()
+                bgPaint.isAntiAlias = true
+                bgPaint.isFilterBitmap = true
+                canvas.drawBitmap(logoBitmap, srcRect, bounds, bgPaint)
+            }
+        }
+    }
+
     private fun drawEditModeHighlights(
         canvas: Canvas,
         layoutConfig: LayoutConfig,
@@ -501,7 +571,8 @@ object CalendarRenderer {
         yearText: String,
         yearTextSize: Float,
         monthTypeface: Typeface,
-        yearTypeface: Typeface
+        yearTypeface: Typeface,
+        logoBitmap: Bitmap? = null
     ) {
         val activeColor = Color.parseColor("#E91E63")
         val inactiveColor = Color.parseColor("#99D81B60")
@@ -544,6 +615,23 @@ object CalendarRenderer {
         dashedPaint.strokeWidth = if (selectedElement == EditableElement.GRID_CARD) 4.5f else 2.5f
         val cardOutRect = RectF(cardBounds.left - 6f, cardBounds.top - 6f, cardBounds.right + 6f, cardBounds.bottom + 6f)
         canvas.drawRoundRect(cardOutRect, 42f * layoutConfig.cardScale, 42f * layoutConfig.cardScale, dashedPaint)
+
+        // 4. Logo bounding box (if enabled)
+        if (layoutConfig.logoEnabled) {
+            val logoW = logoBitmap?.width ?: 200
+            val logoH = logoBitmap?.height ?: 150
+            val logoBounds = calculateLogoBounds(layoutConfig, logoW, logoH)
+            val logoPad = 14f
+            val logoRect = RectF(
+                logoBounds.left - logoPad,
+                logoBounds.top - logoPad,
+                logoBounds.right + logoPad,
+                logoBounds.bottom + logoPad
+            )
+            dashedPaint.color = if (selectedElement == EditableElement.LOGO) activeColor else inactiveColor
+            dashedPaint.strokeWidth = if (selectedElement == EditableElement.LOGO) 4.5f else 2.5f
+            canvas.drawRoundRect(logoRect, 16f, 16f, dashedPaint)
+        }
     }
 
     // Touch hit testing helpers
@@ -568,6 +656,17 @@ object CalendarRenderer {
         // Check Card zone
         if (cardBounds.contains(x, y)) {
             return EditableElement.GRID_CARD
+        }
+
+        // Check Logo zone (if enabled)
+        if (layoutConfig.logoEnabled) {
+            val centerX = 540f + layoutConfig.logoOffsetX
+            val centerY = 1750f + layoutConfig.logoOffsetY
+            val halfW = max(110f * layoutConfig.logoScale, 80f) + 35f
+            val halfH = max(90f * layoutConfig.logoScale, 70f) + 35f
+            if (x in (centerX - halfW)..(centerX + halfW) && y in (centerY - halfH)..(centerY + halfH)) {
+                return EditableElement.LOGO
+            }
         }
 
         return EditableElement.NONE

@@ -63,7 +63,8 @@ import androidx.core.graphics.ColorUtils
 enum class LayoutToolTab {
     POSITION,
     FONT,
-    COLOR
+    COLOR,
+    STYLE
 }
 
 val PRESET_COLORS = listOf(
@@ -94,7 +95,11 @@ fun LayoutAdjustmentPanel(
     onStepElementOffset: (EditableElement, Float, Float) -> Unit,
     onCenterElementX: (EditableElement) -> Unit,
     onResetLayout: () -> Unit,
-    onCloseEditMode: () -> Unit
+    onCloseEditMode: () -> Unit,
+    onUploadLogo: () -> Unit = {},
+    onToggleLogoEnabled: (Boolean) -> Unit = {},
+    onLogoModeChange: (String) -> Unit = {},
+    onClearLogo: () -> Unit = {}
 ) {
     var activeTab by rememberSaveable { mutableStateOf(LayoutToolTab.POSITION) }
 
@@ -104,17 +109,25 @@ fun LayoutAdjustmentPanel(
         uiState.selectedElement
     }
 
-    // Auto-fallback from FONT to POSITION when Calendário is selected
-    val effectiveTab = if (currentElement == EditableElement.GRID_CARD && activeTab == LayoutToolTab.FONT) {
-        LayoutToolTab.POSITION
-    } else {
-        activeTab
+    // Auto-fallback based on selected element
+    val effectiveTab = when {
+        currentElement == EditableElement.LOGO && (activeTab == LayoutToolTab.FONT || activeTab == LayoutToolTab.COLOR) -> {
+            LayoutToolTab.STYLE
+        }
+        currentElement == EditableElement.GRID_CARD && activeTab == LayoutToolTab.FONT -> {
+            LayoutToolTab.POSITION
+        }
+        currentElement != EditableElement.LOGO && activeTab == LayoutToolTab.STYLE -> {
+            LayoutToolTab.POSITION
+        }
+        else -> activeTab
     }
 
     val currentElementColor = when (currentElement) {
         EditableElement.MONTH -> uiState.layoutConfig.monthColor
         EditableElement.YEAR -> uiState.layoutConfig.yearColor
         EditableElement.GRID_CARD -> uiState.layoutConfig.cardAccentColor
+        EditableElement.LOGO -> uiState.layoutConfig.cardAccentColor
         EditableElement.NONE -> uiState.layoutConfig.monthColor
     }
 
@@ -138,6 +151,9 @@ fun LayoutAdjustmentPanel(
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
                 Row(
+                    modifier = Modifier
+                        .weight(1f)
+                        .horizontalScroll(rememberScrollState()),
                     horizontalArrangement = Arrangement.spacedBy(6.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
@@ -173,6 +189,17 @@ fun LayoutAdjustmentPanel(
                         ),
                         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentElement == EditableElement.GRID_CARD)
                     )
+
+                    FilterChip(
+                        selected = currentElement == EditableElement.LOGO,
+                        onClick = { onSelectElement(EditableElement.LOGO) },
+                        label = { Text("Logo", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFB82B62),
+                            selectedLabelColor = Color.White
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentElement == EditableElement.LOGO)
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -197,256 +224,395 @@ fun LayoutAdjustmentPanel(
 
             Spacer(Modifier.height(6.dp))
 
-            // Row 2: Tool Sub-Tabs (Posição | Fonte | Cor)
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clip(RoundedCornerShape(8.dp))
-                    .background(Color(0xFFF9EEF2))
-                    .padding(3.dp),
-                horizontalArrangement = Arrangement.spacedBy(4.dp)
-            ) {
-                // Tab Posição
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (effectiveTab == LayoutToolTab.POSITION) Color(0xFFB82B62) else Color.Transparent,
+            // Logo without file uploaded yet: friendly inline banner
+            if (currentElement == EditableElement.LOGO && !uiState.hasCustomLogo) {
+                Card(
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFDF0F4)),
+                    shape = RoundedCornerShape(10.dp),
                     modifier = Modifier
-                        .weight(1f)
-                        .height(30.dp)
-                        .clickable { activeTab = LayoutToolTab.POSITION }
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Text(
-                            text = "Posição",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (effectiveTab == LayoutToolTab.POSITION) Color.White else Color(0xFF5E2326)
-                        )
-                    }
-                }
-
-                // Tab Fonte (Only for Mês and Ano)
-                if (currentElement != EditableElement.GRID_CARD) {
-                    Surface(
-                        shape = RoundedCornerShape(6.dp),
-                        color = if (effectiveTab == LayoutToolTab.FONT) Color(0xFFB82B62) else Color.Transparent,
-                        modifier = Modifier
-                            .weight(1f)
-                            .height(30.dp)
-                            .clickable { activeTab = LayoutToolTab.FONT }
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Text(
-                                text = "Fonte",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = if (effectiveTab == LayoutToolTab.FONT) Color.White else Color(0xFF5E2326)
-                            )
-                        }
-                    }
-                }
-
-                // Tab Cor (with colored indicator circle)
-                Surface(
-                    shape = RoundedCornerShape(6.dp),
-                    color = if (effectiveTab == LayoutToolTab.COLOR) Color(0xFFB82B62) else Color.Transparent,
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(30.dp)
-                        .clickable { activeTab = LayoutToolTab.COLOR }
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp)
                 ) {
                     Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.Center
-                    ) {
-                        Text(
-                            text = "Cor",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFF5E2326)
-                        )
-                        Spacer(Modifier.width(6.dp))
-                        Box(
-                            modifier = Modifier
-                                .size(13.dp)
-                                .clip(CircleShape)
-                                .background(Color(currentElementColor))
-                                .border(
-                                    width = 1.dp,
-                                    color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFFB82B62),
-                                    shape = CircleShape
-                                )
-                        )
-                    }
-                }
-            }
-
-            Spacer(Modifier.height(8.dp))
-
-            // Sub-tab content area
-            when (effectiveTab) {
-                LayoutToolTab.POSITION -> {
-                    // Scale slider line
-                    val currentScale = when (currentElement) {
-                        EditableElement.MONTH -> uiState.layoutConfig.monthScale
-                        EditableElement.YEAR -> uiState.layoutConfig.yearScale
-                        EditableElement.GRID_CARD -> uiState.layoutConfig.cardScale
-                        EditableElement.NONE -> 1f
-                    }
-
-                    val scaleRange = when (currentElement) {
-                        EditableElement.GRID_CARD -> 0.70f..1.25f
-                        else -> 0.60f..1.60f
-                    }
-
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Text(
-                            text = "Tamanho: ${(currentScale * 100).toInt()}%",
-                            fontSize = 12.sp,
-                            fontWeight = FontWeight.SemiBold,
-                            color = Color(0xFF5E2326),
-                            modifier = Modifier.width(92.dp)
-                        )
-                        Slider(
-                            value = currentScale,
-                            onValueChange = onScaleChange,
-                            valueRange = scaleRange,
-                            colors = SliderDefaults.colors(
-                                thumbColor = Color(0xFFB82B62),
-                                activeTrackColor = Color(0xFFB82B62)
-                            ),
-                            modifier = Modifier.weight(1f)
-                        )
-                    }
-
-                    // Fine adjustment and Center X buttons line
-                    Row(
                         modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(top = 2.dp),
+                            .padding(horizontal = 12.dp, vertical = 8.dp)
+                            .fillMaxWidth(),
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(4.dp)
-                        ) {
+                        Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Ajuste fino:",
+                                "Adicionar Logomarca",
+                                fontWeight = FontWeight.Bold,
                                 fontSize = 12.sp,
-                                fontWeight = FontWeight.Medium,
+                                color = Color(0xFF5E2326)
+                            )
+                            Text(
+                                "Aparece com destaque no rodapé",
+                                fontSize = 11.sp,
                                 color = Color.Gray
                             )
-                            IconButton(
-                                onClick = { onStepElementOffset(currentElement, -10f, 0f) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowBack,
-                                    contentDescription = "Esquerda",
-                                    tint = Color(0xFFB82B62),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { onStepElementOffset(currentElement, 0f, -10f) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowUpward,
-                                    contentDescription = "Cima",
-                                    tint = Color(0xFFB82B62),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { onStepElementOffset(currentElement, 0f, 10f) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.Default.ArrowDownward,
-                                    contentDescription = "Baixo",
-                                    tint = Color(0xFFB82B62),
-                                    modifier = Modifier.size(18.dp)
-                                )
-                            }
-                            IconButton(
-                                onClick = { onStepElementOffset(currentElement, 10f, 0f) },
-                                modifier = Modifier.size(32.dp)
-                            ) {
-                                Icon(
-                                    Icons.AutoMirrored.Filled.ArrowForward,
-                                    contentDescription = "Direita",
-                                    tint = Color(0xFFB82B62),
-                                    modifier = Modifier.size(18.dp)
+                        }
+                        Button(
+                            onClick = onUploadLogo,
+                            colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62)),
+                            shape = RoundedCornerShape(8.dp),
+                            contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                        ) {
+                            Text("Enviar Foto", fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+            } else {
+                // Row 2: Tool Sub-Tabs (Posição | Fonte/Estilo | Cor)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(RoundedCornerShape(8.dp))
+                        .background(Color(0xFFF9EEF2))
+                        .padding(3.dp),
+                    horizontalArrangement = Arrangement.spacedBy(4.dp)
+                ) {
+                    // Tab Posição
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = if (effectiveTab == LayoutToolTab.POSITION) Color(0xFFB82B62) else Color.Transparent,
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(30.dp)
+                            .clickable { activeTab = LayoutToolTab.POSITION }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Text(
+                                text = "Posição",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = if (effectiveTab == LayoutToolTab.POSITION) Color.White else Color(0xFF5E2326)
+                            )
+                        }
+                    }
+
+                    if (currentElement == EditableElement.LOGO) {
+                        // Tab Estilo for Logo
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (effectiveTab == LayoutToolTab.STYLE) Color(0xFFB82B62) else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(30.dp)
+                                .clickable { activeTab = LayoutToolTab.STYLE }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Estilo",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (effectiveTab == LayoutToolTab.STYLE) Color.White else Color(0xFF5E2326)
                                 )
                             }
                         }
+                    } else {
+                        // Tab Fonte (Only for Mês and Ano)
+                        if (currentElement != EditableElement.GRID_CARD) {
+                            Surface(
+                                shape = RoundedCornerShape(6.dp),
+                                color = if (effectiveTab == LayoutToolTab.FONT) Color(0xFFB82B62) else Color.Transparent,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(30.dp)
+                                    .clickable { activeTab = LayoutToolTab.FONT }
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = "Fonte",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (effectiveTab == LayoutToolTab.FONT) Color.White else Color(0xFF5E2326)
+                                    )
+                                }
+                            }
+                        }
 
-                        OutlinedButton(
-                            onClick = { onCenterElementX(currentElement) },
-                            shape = RoundedCornerShape(8.dp),
-                            contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
-                            modifier = Modifier.height(32.dp)
+                        // Tab Cor (with colored indicator circle)
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (effectiveTab == LayoutToolTab.COLOR) Color(0xFFB82B62) else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(30.dp)
+                                .clickable { activeTab = LayoutToolTab.COLOR }
                         ) {
-                            Text("Centralizar X", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB82B62))
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Cor",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFF5E2326)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(13.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(currentElementColor))
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFFB82B62),
+                                            shape = CircleShape
+                                        )
+                                )
+                            }
                         }
                     }
                 }
 
-                LayoutToolTab.FONT -> {
-                    val currentFont = if (currentElement == EditableElement.MONTH) {
-                        uiState.layoutConfig.monthFont
-                    } else {
-                        uiState.layoutConfig.yearFont
-                    }
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        HeaderFontOption.values().forEach { option ->
-                            FilterChip(
-                                selected = currentFont == option,
-                                onClick = {
-                                    if (currentElement == EditableElement.MONTH) {
-                                        onMonthFontChange(option)
-                                    } else {
-                                        onYearFontChange(option)
-                                    }
-                                },
-                                label = { Text(option.displayName, fontSize = 11.sp) },
-                                colors = FilterChipDefaults.filterChipColors(
-                                    selectedContainerColor = Color(0xFFB82B62),
-                                    selectedLabelColor = Color.White
+                Spacer(Modifier.height(8.dp))
+
+                // Sub-tab content area
+                when (effectiveTab) {
+                    LayoutToolTab.POSITION -> {
+                        // Scale slider line
+                        val currentScale = when (currentElement) {
+                            EditableElement.MONTH -> uiState.layoutConfig.monthScale
+                            EditableElement.YEAR -> uiState.layoutConfig.yearScale
+                            EditableElement.GRID_CARD -> uiState.layoutConfig.cardScale
+                            EditableElement.LOGO -> uiState.layoutConfig.logoScale
+                            EditableElement.NONE -> 1f
+                        }
+
+                        val scaleRange = when (currentElement) {
+                            EditableElement.GRID_CARD -> 0.70f..1.25f
+                            EditableElement.LOGO -> 0.50f..2.00f
+                            else -> 0.60f..1.60f
+                        }
+
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Tamanho: ${(currentScale * 100).toInt()}%",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.SemiBold,
+                                color = Color(0xFF5E2326),
+                                modifier = Modifier.width(92.dp)
+                            )
+                            Slider(
+                                value = currentScale,
+                                onValueChange = onScaleChange,
+                                valueRange = scaleRange,
+                                colors = SliderDefaults.colors(
+                                    thumbColor = Color(0xFFB82B62),
+                                    activeTrackColor = Color(0xFFB82B62)
                                 ),
                                 modifier = Modifier.weight(1f)
                             )
                         }
-                    }
-                }
 
-                LayoutToolTab.COLOR -> {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(vertical = 4.dp)
-                    ) {
-                        ColorRowSelector(
-                            selectedColor = currentElementColor,
-                            onColorSelected = { newColor ->
-                                when (currentElement) {
-                                    EditableElement.MONTH -> onMonthColorChange(newColor)
-                                    EditableElement.YEAR -> onYearColorChange(newColor)
-                                    EditableElement.GRID_CARD -> onCardAccentColorChange(newColor)
-                                    EditableElement.NONE -> {}
+                        // Fine adjustment and Center X buttons line
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 2.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Text(
+                                    text = "Ajuste fino:",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color.Gray
+                                )
+                                IconButton(
+                                    onClick = { onStepElementOffset(currentElement, -10f, 0f) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowBack,
+                                        contentDescription = "Esquerda",
+                                        tint = Color(0xFFB82B62),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { onStepElementOffset(currentElement, 0f, -10f) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ArrowUpward,
+                                        contentDescription = "Cima",
+                                        tint = Color(0xFFB82B62),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { onStepElementOffset(currentElement, 0f, 10f) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.Default.ArrowDownward,
+                                        contentDescription = "Baixo",
+                                        tint = Color(0xFFB82B62),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                                IconButton(
+                                    onClick = { onStepElementOffset(currentElement, 10f, 0f) },
+                                    modifier = Modifier.size(32.dp)
+                                ) {
+                                    Icon(
+                                        Icons.AutoMirrored.Filled.ArrowForward,
+                                        contentDescription = "Direita",
+                                        tint = Color(0xFFB82B62),
+                                        modifier = Modifier.size(18.dp)
+                                    )
                                 }
                             }
-                        )
+
+                            OutlinedButton(
+                                onClick = { onCenterElementX(currentElement) },
+                                shape = RoundedCornerShape(8.dp),
+                                contentPadding = PaddingValues(horizontal = 10.dp, vertical = 2.dp),
+                                modifier = Modifier.height(32.dp)
+                            ) {
+                                Text("Centralizar X", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB82B62))
+                            }
+                        }
+                    }
+
+                    LayoutToolTab.FONT -> {
+                        val currentFont = if (currentElement == EditableElement.MONTH) {
+                            uiState.layoutConfig.monthFont
+                        } else {
+                            uiState.layoutConfig.yearFont
+                        }
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            HeaderFontOption.values().forEach { option ->
+                                FilterChip(
+                                    selected = currentFont == option,
+                                    onClick = {
+                                        if (currentElement == EditableElement.MONTH) {
+                                            onMonthFontChange(option)
+                                        } else {
+                                            onYearFontChange(option)
+                                        }
+                                    },
+                                    label = { Text(option.displayName, fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFFB82B62),
+                                        selectedLabelColor = Color.White
+                                    ),
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+                    }
+
+                    LayoutToolTab.COLOR -> {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            ColorRowSelector(
+                                selectedColor = currentElementColor,
+                                onColorSelected = { newColor ->
+                                    when (currentElement) {
+                                        EditableElement.MONTH -> onMonthColorChange(newColor)
+                                        EditableElement.YEAR -> onYearColorChange(newColor)
+                                        EditableElement.GRID_CARD -> onCardAccentColorChange(newColor)
+                                        EditableElement.LOGO -> {}
+                                        EditableElement.NONE -> {}
+                                    }
+                                }
+                            )
+                        }
+                    }
+
+                    LayoutToolTab.STYLE -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    Text(
+                                        text = if (uiState.layoutConfig.logoEnabled) "Exibindo no rodapé" else "Oculto no rodapé",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF5E2326)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    androidx.compose.material3.Switch(
+                                        checked = uiState.layoutConfig.logoEnabled,
+                                        onCheckedChange = onToggleLogoEnabled,
+                                        modifier = Modifier.height(24.dp)
+                                    )
+                                }
+
+                                Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    OutlinedButton(
+                                        onClick = onUploadLogo,
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        shape = RoundedCornerShape(6.dp),
+                                        modifier = Modifier.height(28.dp)
+                                    ) {
+                                        Text("Trocar", fontSize = 11.sp)
+                                    }
+                                    OutlinedButton(
+                                        onClick = onClearLogo,
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp),
+                                        shape = RoundedCornerShape(6.dp),
+                                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFC62828)),
+                                        modifier = Modifier.height(28.dp)
+                                    ) {
+                                        Text("Remover", fontSize = 11.sp)
+                                    }
+                                }
+                            }
+
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                val modes = listOf(
+                                    "ORIGINAL" to "Original",
+                                    "REMOVE_WHITE" to "Sem fundo branco",
+                                    "CIRCLE_BADGE" to "Selo redondo"
+                                )
+                                modes.forEach { (modeKey, modeTitle) ->
+                                    FilterChip(
+                                        selected = uiState.layoutConfig.logoMode == modeKey,
+                                        onClick = { onLogoModeChange(modeKey) },
+                                        label = { Text(modeTitle, fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0xFFB82B62),
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
             }

@@ -67,14 +67,22 @@ app/src/main/
 │   ├── HomeScreen.kt            # Tela inicial, card do mês ativo, busca de clientes e atalhos
 │   ├── EditorScreen.kt          # Tela principal do editor (TopAppBar, preview Canvas 9:16 e barra inferior)
 │   ├── LayoutAdjustPanel.kt     # Painel "Ajustar Layout e Cores" (abas, sub-abas, sliders e seletor de cores)
+│   ├── ThemeGallerySheet.kt     # Galeria de molduras/temas com radar sazonal e filtros
+│   ├── LogoSettingsDialog.kt    # Diálogo de configuração, visualização e modos da logomarca
+│   ├── ProPreviewDialog.kt      # Modal de transparência e preview de modelos exclusivos PRO
 │   ├── DayEditSheet.kt          # ModalBottomSheet de edição do dia (nomes + toggle "X" vermelho)
 │   ├── EditorDialogs.kt         # Diálogos auxiliares (MonthYearPicker, confirmação de restauração)
 │   ├── CustomBackgroundDialog.kt# Modal de orientação prévia e seleção de imagem para moldura
-│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, busca e ações
-│   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview e exportação)
+│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, temas, logo e ações
+│   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview, temas, logo e exportação)
 │   ├── CalendarEngine.kt        # Cálculos de calendário, deslocamentos, nomes pt-BR e grid
 │   ├── CalendarModels.kt        # Modelos imutáveis (CellData, EditableElement, AppScreen, etc.)
 │   ├── LayoutConfig.kt          # Configuração geométrica e visual com serialização/deserialização JSON
+│   ├── SeasonalRadar.kt         # Calendário comercial sazonal offline brasileiro (dias restantes e dicas)
+│   ├── ThemeModels.kt           # Modelos de tema, categorias e contrato de repositório
+│   ├── ThemeCatalog.kt          # Catálogo procedural e embutido de temas (4 free + 6 PRO preview)
+│   ├── ProAccessConfig.kt       # Controle de acesso e transparência das funcionalidades PRO
+│   ├── LogoManager.kt           # Gestor de armazenamento, escala 600x600 e decodificação da logomarca
 │   ├── BackupManager.kt         # Exportação/importação de backup (.json) SAF
 │   ├── BackgroundManager.kt     # Decodificador ImageDecoder/BitmapFactory e zoom central 1080×1920
 │   ├── FontManager.kt           # Gerenciador e cache de Typefaces embutidas
@@ -93,18 +101,26 @@ app/src/main/
 
 | Arquivo | Responsabilidade Exata |
 |---|---|
-| **`MainActivity.kt`** | Ponto de entrada (`ComponentActivity`). Enxuto (~275 linhas), gerencia launchers de arquivos SAF (`CreateDocument`, `OpenDocument`, `PickVisualMedia`, permissões), navegação entre `HomeScreen` e `EditorScreen`, `BackHandler` e host de Snackbar. |
-| **`HomeScreen.kt`** | Painel inicial rápido. Hero card com contadores dinâmicos de agendamentos e dias com "X", botão rápido para compartilhar PNG sem abrir editor, busca global de clientes, carrossel "Meus Meses" (`LazyRow`) e atalhos de "Aparência e Backup". |
+| **`MainActivity.kt`** | Ponto de entrada (`ComponentActivity`). Enxuto (~315 linhas), gerencia launchers de arquivos SAF (`CreateDocument`, `OpenDocument`, `PickVisualMedia`, permissões), navegação entre `HomeScreen` e `EditorScreen`, `BackHandler` e host de Snackbar. |
+| **`HomeScreen.kt`** | Painel inicial rápido. Hero card com contadores dinâmicos de agendamentos e dias com "X", botão rápido para compartilhar PNG sem abrir editor, busca global de clientes, carrossel "Meus Meses" (`LazyRow`) e atalhos de "Aparência e Backup" (com acionamento da `ThemeGallerySheet`). |
 | **`EditorScreen.kt`** | Tela principal do editor. Contém o `Scaffold`, `TopAppBar` (Undo/Redo, navegação de mês, botão de ajuste, atalho de moldura e menu de backup), `CalendarCanvasView` com gestos de toque/arraste sincronizados e barra inferior de Salvar PNG / Compartilhar. |
-| **`LayoutAdjustPanel.kt`** | Painel modular de ajuste visual (zero rolagem). Abas de elemento (`Mês`, `Ano`, `Calendário`), sub-abas de ferramenta (`Posição`, `Fonte`, `Cor`), sliders, botões finos e diálogo de cor customizada (`CustomColorPickerDialog`). |
+| **`LayoutAdjustPanel.kt`** | Painel modular de ajuste visual (zero rolagem). Abas de elemento (`Mês`, `Ano`, `Calendário`, `Logo`), sub-abas de ferramenta (`Posição`, `Fonte`/`Estilo`, `Cor`), sliders, botões finos e diálogo de cor customizada. |
+| **`ThemeGallerySheet.kt`** | Galeria modal de temas com banner dinâmico do Radar Sazonal (`SeasonalRadar`), botões de ação rápida ("Minha Foto" e "Minha Logo"), filtros de categoria e cards em proporção 9:16 com badge PRO e borda ativa. |
+| **`LogoSettingsDialog.kt`** | Modal dedicado de configuração da logomarca: prévia em tempo real, envio de arquivo, seleção de modos (`Original`, `Sem fundo branco`, `Selo redondo`), ativação no rodapé e remoção. |
+| **`ProPreviewDialog.kt`** | Diálogo de transparência radical para modelos exclusivos PRO: exibe badge de diamante e explica de forma honesta a proposta de assinatura futura sem travas inesperadas na exportação. |
 | **`DayEditSheet.kt`** | `ModalBottomSheet` de edição do dia. Permite alternar o "X" vermelho de dia indisponível, adicionar/remover clientes, reordenar prioridades e autocompletar. |
 | **`EditorDialogs.kt`** | Diálogos modais do editor: `MonthYearPickerDialog` (seletor rápido de mês/ano) e `ConfirmRestoreDialog` (confirmação atômica de restauração). |
 | **`CustomBackgroundDialog.kt`** | Modal de orientação prévia antes do upload da moldura (recomenda formato 9:16 vertical e explica ajuste central automático). |
-| **`CalendarViewModel.kt`** | Gerenciamento de estado (`CalendarUiState`), pilhas de Undo/Redo com snapshots de células, motor de busca sem acento (`ClientSearchHelper`), navegação de meses, ajuste fino de layout com arraste 2D e acionamento de exportação assíncrona. |
-| **`CalendarRenderer.kt`** | Motor gráfico Canvas. Desenha fundo, texto do mês, ano 3D com 4 camadas de relevo/sombra e traço curvo (*swoosh*), cartão e grade do calendário, letras dos dias da semana, numerais, "X" vermelho centralizado, algoritmo de auto-fit de nomes em 2 passos e bounding boxes tracejadas em modo de edição. |
+| **`CalendarViewModel.kt`** | Gerenciamento de estado (`CalendarUiState`), pilhas de Undo/Redo com snapshots de células, motor de busca sem acento (`ClientSearchHelper`), navegação de meses, ajuste fino de layout com arraste 2D de elementos (incluindo `LOGO`), catálogo de temas e logo. |
+| **`CalendarRenderer.kt`** | Motor gráfico Canvas. Desenha fundo (temas procedurais do `ThemeCatalog` ou fundo customizado), logomarca no rodapé em 3 modos com escala/offset, texto do mês, ano 3D com 4 camadas de relevo/sombra e traço curvo (*swoosh*), cartão e grade do calendário, letras dos dias da semana, numerais, "X" vermelho centralizado, algoritmo de auto-fit de nomes em 2 passos e bounding boxes tracejadas em modo de edição. |
 | **`CalendarEngine.kt`** | Lógica de datas baseada em `java.time.YearMonth`. Mapeamento de domingo como início de semana (padrão brasileiro `value % 7`), contagem dinâmica de semanas (5 ou 6 linhas) e geração das células do grid. |
-| **`CalendarModels.kt`** | Definições de `CellData` (slot, dia, hasRedX, lista de nomes), `MonthData`, `EditableElement` (`NONE`, `MONTH`, `YEAR`, `GRID_CARD`), `AppScreen` (`HOME`, `CALENDAR`), `MonthSummary` e `ClientSearchResult`. |
-| **`LayoutConfig.kt`** | Armazena escalas, cores hexadecimais, fontes e coordenadas absolutas/offsets (`monthX`, `monthY`, `monthOffsetX`, `monthOffsetY`, `yearX`, `yearY`, `yearOffsetX`, `yearOffsetY`, `cardOffsetX`, `cardOffsetY`, `cardScale`, `cardAccentColor`). Garante compatibilidade retroativa via fallbacks `optDouble`. |
+| **`CalendarModels.kt`** | Definições de `CellData` (slot, dia, hasRedX, lista de nomes), `MonthData`, `EditableElement` (`NONE`, `MONTH`, `YEAR`, `GRID_CARD`, `LOGO`), `AppScreen` (`HOME`, `CALENDAR`), `MonthSummary` e `ClientSearchResult`. |
+| **`LayoutConfig.kt`** | Armazena escalas, cores hexadecimais, fontes, coordenadas e configurações de tema/logomarca (`selectedThemeId`, `logoEnabled`, `logoMode`, `logoScale`, `logoOffsetX`, `logoOffsetY`). Garante total compatibilidade retroativa com backups legados. |
+| **`SeasonalRadar.kt`** | Calendário comercial sazonal offline brasileiro (Verão, Carnaval, Dia da Mulher, Dia das Mães, Dia dos Namorados, São João, Dia da Cliente, Outubro Rosa, Black Friday, Festas de Fim de Ano). Calcula dias restantes e dicas comerciais. |
+| **`ThemeModels.kt`** | Modelos imutáveis do catálogo de temas (`ThemeCategory`, `ThemeSourceType`, `ThemeItem`) e interface `ThemeRepository`. |
+| **`ThemeCatalog.kt`** | Catálogo offline com 10 temas (4 gratuitos imediatamente aplicáveis: `floral_default`, `minimal_cream`, `rose_editorial`, `luxury_gold` + 6 temas de demonstração PRO) com renderização procedural 1080×1920 e cache. |
+| **`ProAccessConfig.kt`** | Configuração de acesso a funcionalidades PRO com transparência total. |
+| **`LogoManager.kt`** | Gerenciamento de arquivo e cache de bitmap da logomarca em `filesDir/user_logo.png`. Decodificação segura (ImageDecoder/BitmapFactory), limite proporcional de até 600×600 px e suporte a transparência PNG. |
 | **`BackupManager.kt`** | Gera e consome backups universais em JSON estruturado (`SCHEMA_VERSION = 1`). Limpa e restaura atomicamente o `SharedPreferences` preservando integridade referencial. Formata data do último backup (`last_backup_at`). |
 | **`BackgroundManager.kt`** | Decodifica `res/drawable-nodpi/bg_base.webp` com `inScaled = false` para manter a escala 1:1. Processa fundos customizados com `ImageDecoder` (software allocator) e fallback `BitmapFactory` com corte central (*center-crop* 1080×1920). |
 | **`FontManager.kt`** | Cache de fontes embutidas (`CINZEL_BOLD`, `FREDOKA_BOLD`, `PLAYFAIR_DISPLAY_BOLD`, `DEFAULT`). Usa referências diretas `R.font.*` para proteção total contra o R8. |

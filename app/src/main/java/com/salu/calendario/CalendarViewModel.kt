@@ -26,6 +26,8 @@ data class CalendarUiState(
     val selectedElement: EditableElement = EditableElement.NONE,
     val editingCell: CellData? = null,
     val hasCustomBackground: Boolean = false,
+    val hasCustomLogo: Boolean = false,
+    val proPreviewTheme: ThemeItem? = null,
     val snackbarMessage: String? = null,
     val canUndo: Boolean = false,
     val canRedo: Boolean = false,
@@ -105,6 +107,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         val savedCells = loadMonthCells(initialYm)
         val cells = CalendarEngine.generateCells(initialYm, savedCells)
         val hasCustom = BackgroundManager.hasCustomBackground(getApplication())
+        val hasLogo = LogoManager.hasCustomLogo(getApplication())
         val lastBackup = BackupManager.getLastBackupTimeFormatted(getApplication())
 
         _uiState.update {
@@ -113,6 +116,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 layoutConfig = initialLayout,
                 cells = cells,
                 hasCustomBackground = hasCustom,
+                hasCustomLogo = hasLogo,
                 lastBackupTimeFormatted = lastBackup
             )
         }
@@ -429,6 +433,14 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                     cardOffsetY = newOffY
                 )
             }
+            EditableElement.LOGO -> {
+                val newOffX = (cfg.logoOffsetX + deltaX).coerceIn(-500f, 500f)
+                val newOffY = (cfg.logoOffsetY + deltaY).coerceIn(-500f, 250f)
+                cfg.copy(
+                    logoOffsetX = newOffX,
+                    logoOffsetY = newOffY
+                )
+            }
             EditableElement.NONE -> cfg
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -442,6 +454,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             EditableElement.MONTH -> cfg.copy(monthScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.YEAR -> cfg.copy(yearScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.GRID_CARD -> cfg.copy(cardScale = scale.coerceIn(0.7f, 1.25f))
+            EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.5f, 2.0f))
             EditableElement.NONE -> cfg
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -531,6 +544,12 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                     cardOffsetY = (cfg.cardOffsetY + deltaY).coerceIn(-500f, 600f)
                 )
             }
+            EditableElement.LOGO -> {
+                cfg.copy(
+                    logoOffsetX = (cfg.logoOffsetX + deltaX).coerceIn(-500f, 500f),
+                    logoOffsetY = (cfg.logoOffsetY + deltaY).coerceIn(-500f, 250f)
+                )
+            }
             EditableElement.NONE -> cfg
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -549,6 +568,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             EditableElement.GRID_CARD -> {
                 cfg.copy(cardOffsetX = 0f) to "Calendário centralizado!"
             }
+            EditableElement.LOGO -> {
+                cfg.copy(logoOffsetX = 0f) to "Logomarca centralizada!"
+            }
             EditableElement.NONE -> cfg to ""
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -556,6 +578,76 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         if (message.isNotEmpty()) {
             showSnackbar(message)
         }
+    }
+
+    // Theme & Logo operations (Phase A)
+    fun selectTheme(theme: ThemeItem) {
+        if (theme.isPro && !ProAccessConfig.isProUnlocked) {
+            _uiState.update { it.copy(proPreviewTheme = theme) }
+            return
+        }
+        val updated = _uiState.value.layoutConfig.copy(selectedThemeId = theme.id)
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+        showSnackbar("Tema aplicado: ${theme.name}")
+    }
+
+    fun dismissProPreview() {
+        _uiState.update { it.copy(proPreviewTheme = null) }
+    }
+
+    fun onLogoPicked(uri: Uri) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = LogoManager.saveLogoFromUri(getApplication(), uri)
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    val updated = _uiState.value.layoutConfig.copy(logoEnabled = true)
+                    _uiState.update {
+                        it.copy(
+                            hasCustomLogo = true,
+                            layoutConfig = updated,
+                            selectedElement = EditableElement.LOGO
+                        )
+                    }
+                    saveLayoutConfig(updated)
+                    showSnackbar("Logomarca importada com sucesso!")
+                } else {
+                    showSnackbar("Erro ao processar imagem da logomarca.")
+                }
+            }
+        }
+    }
+
+    fun toggleLogoEnabled(enabled: Boolean) {
+        val updated = _uiState.value.layoutConfig.copy(logoEnabled = enabled)
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun updateLogoMode(mode: String) {
+        val updated = _uiState.value.layoutConfig.copy(logoMode = mode)
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun updateLogoScale(scale: Float) {
+        val updated = _uiState.value.layoutConfig.copy(logoScale = scale.coerceIn(0.5f, 2.0f))
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun clearLogo() {
+        LogoManager.clearLogo(getApplication())
+        val updated = _uiState.value.layoutConfig.copy(logoEnabled = false)
+        _uiState.update {
+            it.copy(
+                hasCustomLogo = false,
+                layoutConfig = updated,
+                selectedElement = if (it.selectedElement == EditableElement.LOGO) EditableElement.MONTH else it.selectedElement
+            )
+        }
+        saveLayoutConfig(updated)
+        showSnackbar("Logomarca removida.")
     }
 
     fun resetLayout() {

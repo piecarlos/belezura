@@ -101,7 +101,11 @@ fun EditorScreen(
     onCardAccentColorChange: (Int) -> Unit,
     onStepElementOffset: (EditableElement, Float, Float) -> Unit,
     onCenterElementX: (EditableElement) -> Unit,
-    onResetLayout: () -> Unit
+    onResetLayout: () -> Unit,
+    onUploadLogo: () -> Unit = {},
+    onToggleLogoEnabled: (Boolean) -> Unit = {},
+    onLogoModeChange: (String) -> Unit = {},
+    onClearLogo: () -> Unit = {}
 ) {
     val context = LocalContext.current
     var showOptionsMenu by rememberSaveable { mutableStateOf(false) }
@@ -379,7 +383,11 @@ fun EditorScreen(
                     onStepElementOffset = onStepElementOffset,
                     onCenterElementX = onCenterElementX,
                     onResetLayout = onResetLayout,
-                    onCloseEditMode = onToggleEditMode
+                    onCloseEditMode = onToggleEditMode,
+                    onUploadLogo = onUploadLogo,
+                    onToggleLogoEnabled = onToggleLogoEnabled,
+                    onLogoModeChange = onLogoModeChange,
+                    onClearLogo = onClearLogo
                 )
             }
         }
