@@ -32,6 +32,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.BrandingWatermark
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
@@ -105,6 +106,7 @@ fun HomeScreen(
     val scrollState = rememberScrollState()
 
     var showBackupMenu by rememberSaveable { mutableStateOf(false) }
+    var whatsAppTargetResult by remember { mutableStateOf<ClientSearchResult?>(null) }
 
     // Active month summary calculation
     val activeYm = uiState.currentYearMonth
@@ -578,24 +580,40 @@ fun HomeScreen(
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color.White)
-                                            .clickable { onOpenDayFromSearch(result) }
-                                            .padding(horizontal = 12.dp, vertical = 9.dp),
+                                            .padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
-                                        Text(
-                                            text = result.name,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 14.sp,
-                                            color = Color(0xFF1A1A1A)
-                                        )
+                                        Column(
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .clickable { onOpenDayFromSearch(result) }
+                                        ) {
+                                            Text(
+                                                text = result.name,
+                                                fontWeight = FontWeight.Bold,
+                                                fontSize = 14.sp,
+                                                color = Color(0xFF1A1A1A)
+                                            )
+                                            Text(
+                                                text = "${result.day} de $monthName ${result.yearMonth.year}",
+                                                fontSize = 12.sp,
+                                                color = Color(0xFFB82B62),
+                                                fontWeight = FontWeight.Medium
+                                            )
+                                        }
 
-                                        Text(
-                                            text = "${result.day} de $monthName ${result.yearMonth.year}",
-                                            fontSize = 12.sp,
-                                            color = Color(0xFFB82B62),
-                                            fontWeight = FontWeight.Medium
-                                        )
+                                        IconButton(
+                                            onClick = { whatsAppTargetResult = result },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.AutoMirrored.Filled.Chat,
+                                                contentDescription = "Avisar no WhatsApp",
+                                                tint = Color(0xFF25D366),
+                                                modifier = Modifier.size(19.dp)
+                                            )
+                                        }
                                     }
                                 }
                             }
@@ -757,6 +775,17 @@ fun HomeScreen(
 
             Spacer(Modifier.height(10.dp))
         }
+    }
+
+    // Modal WhatsApp Message Dialog (from Search Results)
+    whatsAppTargetResult?.let { result ->
+        WhatsAppMessageDialog(
+            clientName = result.name,
+            day = result.day,
+            month = result.yearMonth.monthValue,
+            year = result.yearMonth.year,
+            onDismiss = { whatsAppTargetResult = null }
+        )
     }
 }
 

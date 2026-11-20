@@ -18,6 +18,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.Chat
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
@@ -69,6 +70,7 @@ fun CellEditBottomSheet(
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newNameText by rememberSaveable { mutableStateOf("") }
+    var whatsAppClientName by rememberSaveable { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
 
     ModalBottomSheet(
@@ -241,7 +243,20 @@ fun CellEditBottomSheet(
                                     modifier = Modifier.weight(1f)
                                 )
 
-                                Row {
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    // Avisar no WhatsApp
+                                    IconButton(
+                                        onClick = { whatsAppClientName = name },
+                                        modifier = Modifier.size(32.dp)
+                                    ) {
+                                        Icon(
+                                            Icons.AutoMirrored.Filled.Chat,
+                                            contentDescription = "Avisar no WhatsApp",
+                                            tint = Color(0xFF25D366),
+                                            modifier = Modifier.size(19.dp)
+                                        )
+                                    }
+
                                     // Move Up
                                     IconButton(
                                         onClick = { onMoveUp(index) },
@@ -287,6 +302,19 @@ fun CellEditBottomSheet(
             }
 
             Spacer(Modifier.height(16.dp))
+        }
+    }
+
+    // Modal WhatsApp Message Dialog
+    whatsAppClientName?.let { clientName ->
+        cell.dayNumber?.let { day ->
+            WhatsAppMessageDialog(
+                clientName = clientName,
+                day = day,
+                month = yearMonth.monthValue,
+                year = yearMonth.year,
+                onDismiss = { whatsAppClientName = null }
+            )
         }
     }
 }
