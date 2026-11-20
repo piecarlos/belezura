@@ -49,11 +49,20 @@ O `app/build.gradle.kts` lê dinamicamente `rootProject.file("keystore.propertie
 # 3. Compilar APK Release otimizado com R8
 .\gradlew assembleRelease
 
-# 4. Instalar APK Release no emulador ou dispositivo via ADB
+# 4. Compilar APK God Mode (PRO 100% desbloqueado para testes manuais)
+.\gradlew assembleGodmode
+
+# 5. Instalar APK Release no emulador ou dispositivo via ADB
 adb -e install -r app\build\outputs\apk\release\app-release.apk
 
-# 5. Iniciar app via ADB
+# 6. Instalar APK God Mode no emulador via ADB (instala lado a lado)
+adb -e install -r app\build\outputs\apk\godmode\app-godmode.apk
+
+# 7. Iniciar app via ADB (Release)
 adb -e shell am start -n com.salu.calendario.v2/com.salu.calendario.MainActivity
+
+# 8. Iniciar app via ADB (God Mode)
+adb -e shell am start -n com.salu.calendario.v2.godmode/com.salu.calendario.MainActivity
 ```
 
 ---
@@ -110,19 +119,19 @@ app/src/main/
 |---|---|
 | **`MainActivity.kt`** | Ponto de entrada (`ComponentActivity`). Enxuto (~325 linhas), gerencia launchers de arquivos SAF (`CreateDocument`, `OpenDocument`, `PickVisualMedia`, permissões), navegação entre `HomeScreen` e `EditorScreen`, `BackHandler` e host de Snackbar. |
 | **`HomeScreen.kt`** | Painel inicial rápido / Hub. Hero card com contadores dinâmicos de agendamentos e dias com "X", botão rápido para compartilhar PNG sem abrir editor, busca global de clientes, carrossel "Meus Meses" (`LazyRow`) e atalhos de "Aparência e Backup" (com acionamento da `ThemeGallerySheet`). |
-| **`EditorScreen.kt`** | Tela principal do editor. Contém o `Scaffold`, `TopAppBar` (Undo/Redo, navegação de mês, botão de ajuste, atalho de moldura e menu de backup), `CalendarCanvasView` com gestos multi-touch (arraste e pinça sincronizados) e toque direto na logomarca. |
-| **`LayoutAdjustPanel.kt`** | Painel modular de ajuste visual (zero rolagem). Quatro abas (`Mês`, `Ano`, `Calendário`, `Logo`), sub-abas (`Posição`, `Fonte`/`Estilo`, `Cor`), sliders (com escala 50%..220% para a logo), botões de ajuste fino (`← ↑ ↓ →`) e `Centralizar X`. |
+| **`EditorScreen.kt`** | Tela principal do editor. Contém o `Scaffold`, `TopAppBar` (Undo/Redo, navegação de mês, botão de ajuste, atalho de moldura e menu de backup), `CalendarCanvasView` com gestos multi-touch (arraste e pinça sincronizados para logo e recado) e toque direto na logomarca ou no recado para abrir a edição. |
+| **`LayoutAdjustPanel.kt`** | Painel modular de ajuste visual (zero rolagem). Cinco abas (`Mês`, `Ano`, `Calendário`, `Logo`, `Recado`), sub-abas contextuais (`Posição`, `Fonte`, `Cor`, `Estilo`, `Recado`), atalhos de posição da logo (`Topo Esq`, `Topo Dir`, `Rodapé`), 4 frases prontas de salão, sliders de tamanho, botões de ajuste fino (`← ↑ ↓ →`) e `Centralizar X`. |
 | **`ThemeGallerySheet.kt`** | Galeria modal de temas com banner dinâmico do Radar Sazonal (`SeasonalRadar`), miniaturas reais geradas para temas embutidos (`bg_make_glam`, `bg_make_glam_2`, `bg_base`), filtros de categoria e cards em proporção 9:16 com badge PRO e borda ativa. |
-| **`LogoSettingsDialog.kt`** | Modal dedicado de configuração da logomarca: prévia em tempo real, envio de arquivo, seleção de modos (`Original`, `Sem fundo branco`, `Selo redondo`), ativação no rodapé e remoção. |
+| **`LogoSettingsDialog.kt`** | Modal dedicado de configuração da logomarca: prévia em tempo real, envio de arquivo, seleção de modos (`Original`, `Sem fundo branco`, `Selo redondo`), ativação no calendário e remoção. |
 | **`ProPreviewDialog.kt`** | Diálogo de transparência radical para modelos exclusivos PRO: exibe badge de diamante e explica de forma honesta a proposta de assinatura futura sem travas inesperadas na exportação. |
 | **`DayEditSheet.kt`** | `ModalBottomSheet` de edição do dia. Permite alternar o "X" vermelho de dia indisponível, adicionar/remover clientes, reordenar prioridades e autocompletar. |
 | **`EditorDialogs.kt`** | Diálogos modais do editor: `MonthYearPickerDialog` (seletor rápido de mês/ano) e `ConfirmRestoreDialog` (confirmação atômica de restauração). |
 | **`CustomBackgroundDialog.kt`** | Modal de orientação prévia antes do upload da moldura (recomenda formato 9:16 vertical e explica ajuste central automático). |
-| **`CalendarViewModel.kt`** | Gerenciamento de estado (`CalendarUiState`), pilhas de Undo/Redo com snapshots de células, motor de busca sem acento (`ClientSearchHelper`), navegação de meses, ajuste fino de layout com arraste 2D e pinça (incluindo `LOGO`), catálogo de temas e logo. |
-| **`CalendarRenderer.kt`** | Motor gráfico Canvas. Desenha fundo (temas procedurais do `ThemeCatalog` ou fundos customizados/embutidos), logomarca no rodapé em 3 modos com escala/offset e bounding box para toque direto, texto do mês, ano 3D com 4 camadas de relevo/sombra e swoosh, cartão e grade do calendário, letras dos dias da semana, numerais, "X" vermelho centralizado, algoritmo de auto-fit de nomes em 2 passos e caixas tracejadas em modo de edição. |
+| **`CalendarViewModel.kt`** | Gerenciamento de estado (`CalendarUiState`), pilhas de Undo/Redo com snapshots de células, motor de busca sem acento (`ClientSearchHelper`), navegação de meses, ajuste fino de layout com arraste 2D e pinça (incluindo `LOGO` e `FOOTER_MESSAGE`), atalhos de posicionamento, catálogo de temas e logo. |
+| **`CalendarRenderer.kt`** | Motor gráfico Canvas. Desenha fundo (temas procedurais do `ThemeCatalog` ou fundos customizados/embutidos), logomarca livre em qualquer posição com escala/offset e bounding box para toque direto, mensagem / recado de rodapé (CTA) com tipografia Fredoka Bold e contraste automático por luminância, texto do mês, ano 3D com 4 camadas de relevo/sombra e swoosh, cartão e grade do calendário, letras dos dias da semana, numerais, "X" vermelho centralizado, algoritmo de auto-fit de nomes em 2 passos e caixas tracejadas em modo de edição. |
 | **`CalendarEngine.kt`** | Lógica de datas baseada em `java.time.YearMonth`. Mapeamento de domingo como início de semana (padrão brasileiro `value % 7`), contagem dinâmica de semanas (5 ou 6 linhas) e geração das células do grid. |
-| **`CalendarModels.kt`** | Definições de `CellData` (slot, dia, hasRedX, lista de nomes), `MonthData`, `EditableElement` (`NONE`, `MONTH`, `YEAR`, `GRID_CARD`, `LOGO`), `AppScreen` (`HOME`, `CALENDAR`), `MonthSummary` e `ClientSearchResult`. |
-| **`LayoutConfig.kt`** | Armazena escalas, cores hexadecimais, fontes, coordenadas e configurações de tema/logomarca (`selectedThemeId`, `logoEnabled`, `logoMode`, `logoScale`, `logoOffsetX`, `logoOffsetY`). Garante total compatibilidade retroativa com backups legados. |
+| **`CalendarModels.kt`** | Definições de `CellData` (slot, dia, hasRedX, lista de nomes), `MonthData`, `EditableElement` (`NONE`, `MONTH`, `YEAR`, `GRID_CARD`, `LOGO`, `FOOTER_MESSAGE`), `AppScreen` (`HOME`, `CALENDAR`), `MonthSummary` e `ClientSearchResult`. |
+| **`LayoutConfig.kt`** | Armazena escalas, cores hexadecimais, fontes, coordenadas e configurações de tema/logomarca/recado (`selectedThemeId`, `logoEnabled`, `logoMode`, `logoScale`, `logoOffsetX`, `logoOffsetY`, `footerMessage`, `showFooterMessage`, `footerScale`, `footerOffsetX`, `footerOffsetY`, `footerColor`). Garante total compatibilidade retroativa com backups legados. |
 | **`SeasonalRadar.kt`** | Calendário comercial sazonal offline brasileiro (Verão, Carnaval, Dia da Mulher, Dia das Mães, Dia dos Namorados, São João, Dia da Cliente, Outubro Rosa, Black Friday, Festas de Fim de Ano). Calcula dias restantes e dicas comerciais. |
 | **`ThemeModels.kt`** | Modelos imutáveis do catálogo de temas (`ThemeCategory`, `ThemeSourceType`, `ThemeItem`, `ThemePalette`) e interface `ThemeRepository`. |
 | **`ThemeCatalog.kt`** | Catálogo offline com temas embutidos (`make_glam_luxo`, `make_glam_floral`, `floral_default`, `minimal_cream`, `rose_editorial`, `luxury_gold` + temas de demonstração PRO), paletas harmônicas automáticas e escalas recomendadas (`defaultCalendarScale`). |
@@ -241,7 +250,19 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
     "cardScale": 1.0,
     "cardOffsetX": 0.0,
     "cardOffsetY": 0.0,
-    "cardAccentColor": "#FFE89BAE"
+    "cardAccentColor": "#FFE89BAE",
+    "selectedThemeId": "floral_default",
+    "logoEnabled": false,
+    "logoMode": "ORIGINAL",
+    "logoScale": 1.0,
+    "logoOffsetX": 0.0,
+    "logoOffsetY": 0.0,
+    "footerMessage": "",
+    "showFooterMessage": false,
+    "footerScale": 1.0,
+    "footerOffsetX": 0.0,
+    "footerOffsetY": 0.0,
+    "footerColor": "#00000000"
   },
   "months": {
     "month_data_2026_12": {
@@ -257,15 +278,38 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
 
 ## 6. Status Atual das Funcionalidades e Validação
 
-- **Fase A (100% Concluída):**
-  - Identidade visual **Belezura** com Adaptive Icon 3D em alta definição gerado em todas as densidades mipmap com fundo sólido `#5B0224`.
-  - Galeria de molduras integrada (`ThemeGallerySheet`) com temas procedurais e temas fotográficos embutidos (`Make Glam Luxo` e `Make Glam Floral`), exibindo miniaturas reais e aplicando paleta automática (`ThemePalette`) com escala adaptada da grade (`defaultCalendarScale = 0.88f`).
-  - Suporte completo a logomarca no rodapé: diálogo de configuração (`LogoSettingsDialog`), 3 modos visuais (Original, Sem fundo branco, Selo redondo), toque direto na logo no canvas para abrir o painel de ajuste, e gestos de pinça e arraste livre com escala de 50% a 220%.
-- **Tela Inicial (Home):** Resumo dinâmico do mês ativo, botão de compartilhamento PNG direto, carrossel de meses salvos e atalho `+ Outro mês`.
-- **Busca Global de Clientes:** Motor `ClientSearchHelper` com normalização de diacríticos (`Normalizer.Form.NFD`) e case-insensitive; toque no resultado abre diretamente o mês e o bottom sheet de edição do dia.
-- **Painel de Ajuste Zero-Rolagem:** Quatro abas de topo (`Mês`, `Ano`, `Calendário`, `Logo`), sub-abas de ferramentas (`Posição`, `Fonte`/`Estilo`, `Cor`), ajuste fino direcional (`← ↑ ↓ →`) e botão `Centralizar X`.
+- **Fase A (100% Concluída e Validada):**
+  - **Identidade & Ícone:** Transição visual para **Belezura** com Adaptive Icon 3D em alta resolução em todas as densidades `mipmap-*` com fundo sólido `#5B0224`.
+  - **Build God Mode:** 3º buildType `godmode` (`Belezura GOD`, `applicationIdSuffix = ".godmode"`, `PRO_GOD_MODE = true`) instalando lado a lado para testes manuais da galeria PRO sem afetar `debug`/`release`.
+  - **Galeria de Molduras Integrada (`ThemeGallerySheet`):** Temas procedurais e fotográficos embutidos (`Make Glam Luxo` e `Make Glam Floral`), miniaturas reais geradas, paleta automática (`ThemePalette`) e escala adaptada da grade (`defaultCalendarScale = 0.88f`).
+  - **Logomarca Livre em Todo o Canvas:** Diálogo de configuração (`LogoSettingsDialog`), 3 modos visuais (Original, Sem fundo branco, Selo redondo), toque direto na logo no canvas para abrir o painel de ajuste, gestos multi-touch (pinça e arraste livre com escala de 50% a 220%), limites seguros para não perder a logo e atalhos rápidos de posição (`Topo Esq`, `Topo Dir`, `Rodapé`).
+  - **Recado / CTA Personalizado no Rodapé:** Mensagem de até 2 linhas com quebra automática, tipografia Fredoka Bold, contraste inteligente por luminância (dourado `#FFE082` em temas escuros e vinho nos claros), toque direto na frase no canvas para editar, e chip `Recado` no painel com 4 frases prontas de salão, slider de escala, ajuste fino e seletor de cor.
 - **Suíte de Testes Automatizados:**
+  - `LayoutConfigTest.kt`: Validação de defaults, retrocompatibilidade de JSONs legados e round-trip completo com campos de logo e recado.
   - `ClientSearchTest.kt`: Validação de busca insensível a acentuação e ordenação multi-mês.
   - `BackupManagerTest.kt`: Validação de exportação/importação e integridade do schema JSON.
   - `CalendarEngineTest.kt`: Validação de offset de início de semana e linhas do grid.
-- **Compilação e R8:** Builds `assembleDebug` e `assembleRelease` 100% funcionais e validados no emulador `Belezura_Teste`.
+  - `SeasonalRadarTest.kt`: Validação de cálculo de datas comerciais brasileiras e dicas.
+- **Compilação e R8:** Builds `assembleDebug`, `assembleRelease` e `assembleGodmode` 100% funcionais e validados no emulador `Belezura_Teste`.
+
+---
+
+## 7. Roadmap da Fase B: Hub Central & Módulo de Promoções
+
+A **Fase B** transforma a tela inicial de um simples visualizador de mês em um verdadeiro **Hub de Negócios e Marketing Visual** para a profissional da beleza:
+
+1. **Evolução da HomeScreen para Formato Hub:**
+   - **Hero Card Dinâmico:** Visão rápida do mês atual com métricas acionáveis (vagas restantes, ocupação estimada, status da divulgação).
+   - **Módulo de Ações Rápidas (Quick Actions):** Acesso em 1 toque para:
+     - *Criar Agenda do Mês*
+     - *Criar Post de Promoção / Aviso*
+     - *Personalizar Moldura & Marca*
+     - *Avisar Clientes no WhatsApp*
+   - **Feed / Radar de Oportunidades Sazonais:** Destaque para a próxima data comemorativa comercial com contagem regressiva e sugestão de ação de marketing pronta.
+
+2. **Módulo de Peças Rápidas / Promoções (Story 9:16):**
+   - Criação de peças complementares ao calendário no mesmo padrão 1080×1920:
+     - Avisos de "Agenda Aberta" / "Últimos Horários".
+     - Tabela de Preços / Combos Promocionais.
+     - Lembretes e Regras de Atendimento (ex: tolerância de atraso, cancelamento).
+   - Reutilização dos motores gráficos já estáveis (`CalendarRenderer`, `ThemeCatalog`, `FontManager`, `ExportHelper`).
