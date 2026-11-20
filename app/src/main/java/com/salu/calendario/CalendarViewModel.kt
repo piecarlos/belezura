@@ -268,6 +268,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     // Cell Editing
     fun openCellEditor(slotIndex: Int) {
         val cell = _uiState.value.cells.firstOrNull { it.slotIndex == slotIndex } ?: return
+        val isRealDay = cell.dayNumber != null && cell.dayNumber > 0
+        val hasData = cell.hasRedX || cell.names.isNotEmpty()
+        if (!isRealDay && !hasData) return
         _uiState.update { it.copy(editingCell = cell) }
     }
 
@@ -276,6 +279,10 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun toggleRedX(slotIndex: Int, enabled: Boolean) {
+        val cell = _uiState.value.cells.firstOrNull { it.slotIndex == slotIndex } ?: return
+        val isRealDay = cell.dayNumber != null && cell.dayNumber > 0
+        val hasData = cell.hasRedX || cell.names.isNotEmpty()
+        if (!isRealDay && !hasData) return
         updateCell(slotIndex) { it.copy(hasRedX = enabled) }
     }
 
@@ -320,6 +327,10 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
 
     private fun updateCell(slotIndex: Int, transform: (CellData) -> CellData) {
         val currentCells = _uiState.value.cells
+        val targetCell = currentCells.firstOrNull { it.slotIndex == slotIndex }
+        val isRealDay = targetCell?.dayNumber != null && targetCell.dayNumber > 0
+        val hasData = targetCell != null && (targetCell.hasRedX || targetCell.names.isNotEmpty())
+        if (!isRealDay && !hasData) return
 
         // Save snapshot to undo stack
         undoStack.addLast(currentCells)
@@ -857,6 +868,43 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     fun updatePromoDraft(newDraft: PromoDraft) {
         _uiState.update { it.copy(promoDraft = newDraft) }
         prefs.edit().putString("promo_draft_json", newDraft.toJson()).apply()
+    }
+
+    fun updatePromoTitleFont(fontName: String) {
+        val current = _uiState.value.promoDraft
+        updatePromoDraft(current.copy(titleFont = fontName))
+    }
+
+    fun updatePromoAccentColor(hex: String) {
+        val current = _uiState.value.promoDraft
+        updatePromoDraft(current.copy(accentColorHex = hex))
+    }
+
+    fun updatePromoLogoTransform(scale: Float, offsetX: Float, offsetY: Float) {
+        val current = _uiState.value.promoDraft
+        updatePromoDraft(
+            current.copy(
+                logoScale = scale.coerceIn(0.4f, 2.5f),
+                logoOffsetX = offsetX.coerceIn(-500f, 500f),
+                logoOffsetY = offsetY.coerceIn(-800f, 800f)
+            )
+        )
+    }
+
+    fun resetPromoLogoTransform() {
+        val current = _uiState.value.promoDraft
+        updatePromoDraft(
+            current.copy(
+                logoScale = 1.0f,
+                logoOffsetX = 0f,
+                logoOffsetY = 0f
+            )
+        )
+    }
+
+    fun centerPromoLogoX() {
+        val current = _uiState.value.promoDraft
+        updatePromoDraft(current.copy(logoOffsetX = 0f))
     }
 
     fun setPromoTemplate(type: PromoTemplateType, resetToPreset: Boolean = false) {

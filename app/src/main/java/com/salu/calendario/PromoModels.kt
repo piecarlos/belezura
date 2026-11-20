@@ -21,7 +21,12 @@ data class PromoDraft(
     val subtitle: String = "",
     val items: List<PromoLineItem> = emptyList(),
     val footerCta: String = "",
-    val showLogo: Boolean = true
+    val showLogo: Boolean = true,
+    val titleFont: String = "PLAYFAIR_DISPLAY_BOLD",
+    val accentColorHex: String = "",
+    val logoScale: Float = 1.0f,
+    val logoOffsetX: Float = 0f,
+    val logoOffsetY: Float = 0f
 ) {
     fun toJson(): String {
         val root = JSONObject()
@@ -39,6 +44,11 @@ data class PromoDraft(
         root.put("items", arr)
         root.put("footerCta", footerCta)
         root.put("showLogo", showLogo)
+        root.put("titleFont", titleFont)
+        root.put("accentColorHex", accentColorHex)
+        root.put("logoScale", logoScale.toDouble())
+        root.put("logoOffsetX", logoOffsetX.toDouble())
+        root.put("logoOffsetY", logoOffsetY.toDouble())
         return root.toString()
     }
 
@@ -111,6 +121,11 @@ data class PromoDraft(
                 val subtitle = root.optString("subtitle", fallback.subtitle)
                 val footerCta = root.optString("footerCta", fallback.footerCta)
                 val showLogo = root.optBoolean("showLogo", fallback.showLogo)
+                val titleFont = root.optString("titleFont", fallback.titleFont)
+                val accentColorHex = root.optString("accentColorHex", fallback.accentColorHex)
+                val logoScale = root.optDouble("logoScale", fallback.logoScale.toDouble()).toFloat()
+                val logoOffsetX = root.optDouble("logoOffsetX", fallback.logoOffsetX.toDouble()).toFloat()
+                val logoOffsetY = root.optDouble("logoOffsetY", fallback.logoOffsetY.toDouble()).toFloat()
 
                 val items = mutableListOf<PromoLineItem>()
                 val arr = root.optJSONArray("items")
@@ -134,7 +149,12 @@ data class PromoDraft(
                     subtitle = subtitle,
                     items = finalItems,
                     footerCta = footerCta,
-                    showLogo = showLogo
+                    showLogo = showLogo,
+                    titleFont = titleFont,
+                    accentColorHex = accentColorHex,
+                    logoScale = logoScale,
+                    logoOffsetX = logoOffsetX,
+                    logoOffsetY = logoOffsetY
                 )
             } catch (_: Exception) {
                 getPreset(PromoTemplateType.AGENDA_ABERTA)

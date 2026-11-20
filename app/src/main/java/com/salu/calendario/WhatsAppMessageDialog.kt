@@ -19,23 +19,17 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Chat
-import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
-import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -49,8 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun WhatsAppMessageDialog(
     clientName: String,
@@ -60,7 +55,6 @@ fun WhatsAppMessageDialog(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
     var selectedTemplate by remember { mutableStateOf(WhatsAppTemplateType.CONFIRMACAO) }
     var messageText by remember(selectedTemplate, clientName, day, month, year) {
@@ -71,21 +65,26 @@ fun WhatsAppMessageDialog(
         WhatsAppHelper.formatClientDate(day, month, year)
     }
 
-    ModalBottomSheet(
+    Dialog(
         onDismissRequest = onDismiss,
-        sheetState = sheetState,
-        containerColor = Color(0xFFFFFDFD),
-        dragHandle = null,
-        modifier = Modifier
-            .navigationBarsPadding()
-            .imePadding()
+        properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
-        Column(
+        Surface(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
+                .fillMaxWidth(0.92f)
+                .padding(vertical = 16.dp)
+                .imePadding(),
+            shape = RoundedCornerShape(24.dp),
+            color = Color(0xFFFFFDFD),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
             // Header
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -122,7 +121,7 @@ fun WhatsAppMessageDialog(
             // Template Selector Chips (Confirmar | Lembrete | Pós-atendimento)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
             ) {
                 WhatsAppTemplateType.values().forEach { template ->
                     val isSelected = selectedTemplate == template
@@ -142,13 +141,16 @@ fun WhatsAppMessageDialog(
                         )
                     ) {
                         Box(
-                            modifier = Modifier.fillMaxSize(),
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(horizontal = 4.dp),
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
                                 text = template.label,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 12.sp,
+                                fontSize = 11.5.sp,
+                                maxLines = 1,
                                 color = if (isSelected) Color.White else Color(0xFF5E2326),
                                 textAlign = TextAlign.Center
                             )
@@ -230,4 +232,5 @@ fun WhatsAppMessageDialog(
             }
         }
     }
+}
 }

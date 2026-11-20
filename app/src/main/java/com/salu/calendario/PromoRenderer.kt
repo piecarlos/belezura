@@ -67,13 +67,20 @@ object PromoRenderer {
         val bgBaseColor = try { Color.parseColor(palette.backgroundBaseHex) } catch (_: Exception) { Color.WHITE }
         val isDark = ColorUtils.calculateLuminance(bgBaseColor) < 0.35f
 
-        val accentColor = try { Color.parseColor(palette.calendarAccentHex) } catch (_: Exception) { Color.parseColor("#E89BAE") }
+        val defaultAccentColor = try { Color.parseColor(palette.calendarAccentHex) } catch (_: Exception) { Color.parseColor("#E89BAE") }
         val yearColor = try { Color.parseColor(palette.yearColorHex) } catch (_: Exception) { Color.parseColor("#B82B62") }
         val monthColor = try { Color.parseColor(palette.monthColorHex) } catch (_: Exception) { Color.parseColor("#5E2326") }
 
+        val customAccentColor: Int? = if (promoDraft.accentColorHex.isNotBlank()) {
+            try { Color.parseColor(promoDraft.accentColorHex.trim()) } catch (_: Exception) { null }
+        } else null
+
+        val accentColor = customAccentColor ?: defaultAccentColor
         val primaryTextColor = if (isDark) Color.WHITE else monthColor
         val secondaryTextColor = if (isDark) Color.parseColor("#E4E4E7") else Color.parseColor("#6E5055")
-        val highlightColor = if (isDark) {
+        val highlightColor = if (customAccentColor != null) {
+            customAccentColor
+        } else if (isDark) {
             if (ColorUtils.calculateContrast(yearColor, Color.parseColor("#161618")) < 3.5) Color.parseColor("#F5C869") else yearColor
         } else {
             yearColor
@@ -97,7 +104,9 @@ object PromoRenderer {
         }
         canvas.drawRoundRect(cardRect, cornerRadius, cornerRadius, cardFillPaint)
 
-        cardStrokePaint.color = if (isDark) {
+        cardStrokePaint.color = if (customAccentColor != null) {
+            customAccentColor
+        } else if (isDark) {
             Color.argb(160, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
         } else {
             accentColor
@@ -112,13 +121,11 @@ object PromoRenderer {
         // Optional Logo at top
         val logoBitmap = if (promoDraft.showLogo) LogoManager.getLogoBitmap(context) else null
         if (promoDraft.showLogo && logoBitmap != null) {
-            val logoAspect = if (logoBitmap.height > 0) logoBitmap.width.toFloat() / logoBitmap.height.toFloat() else 1f
-            val targetH = 115f
-            val targetW = min(360f, targetH * logoAspect)
-            val logoRect = RectF(centerX - targetW / 2f, cursorY, centerX + targetW / 2f, cursorY + targetH)
-
-            drawPromoLogo(canvas, logoBitmap, logoRect, layoutConfig.logoMode)
-            cursorY += targetH + 20f
+            val logoRect = getLogoBounds(context, promoDraft)
+            if (logoRect != null) {
+                drawPromoLogo(canvas, logoBitmap, logoRect, layoutConfig.logoMode)
+            }
+            cursorY += 115f + 20f
         }
 
         // Pill Badge (e.g. "ÚLTIMOS HORÁRIOS")
@@ -160,7 +167,18 @@ object PromoRenderer {
 
         // Main Title (e.g. "Agenda Aberta")
         if (promoDraft.title.isNotBlank()) {
-            val titleTypeface = FontManager.getTypeface(context, HeaderFontOption.PLAYFAIR_DISPLAY_BOLD)
+            val titleFontOption = when (promoDraft.titleFont.uppercase()) {
+                "DEFAULT", "SYSTEM_DEFAULT", "PADRÃO", "PADRAO" -> HeaderFontOption.SYSTEM_DEFAULT
+                "CINZEL", "CINZEL_BOLD" -> HeaderFontOption.CINZEL_BOLD
+                "PLAYFAIR", "PLAYFAIR_DISPLAY", "PLAYFAIR_DISPLAY_BOLD" -> HeaderFontOption.PLAYFAIR_DISPLAY_BOLD
+                "FREDOKA", "FREDOKA_BOLD" -> HeaderFontOption.FREDOKA_BOLD
+                else -> try {
+                    HeaderFontOption.valueOf(promoDraft.titleFont)
+                } catch (_: Exception) {
+                    HeaderFontOption.PLAYFAIR_DISPLAY_BOLD
+                }
+            }
+            val titleTypeface = FontManager.getTypeface(context, titleFontOption)
             var titleSize = 62f
 
             textPaint.reset()
@@ -246,7 +264,9 @@ object PromoRenderer {
             textPaint.textAlign = Paint.Align.CENTER
 
             // Luminance contrast check for footer
-            textPaint.color = if (isDark) {
+            textPaint.color = if (customAccentColor != null) {
+                customAccentColor
+            } else if (isDark) {
                 val contrastRatio = ColorUtils.calculateContrast(highlightColor, Color.parseColor("#181818"))
                 if (contrastRatio < 3.5) Color.parseColor("#F5C869") else highlightColor
             } else {
@@ -579,6 +599,26 @@ object PromoRenderer {
                 }
             }
         }
+    }
+
+    fun getLogoBounds(context: Context, promoDraft: PromoDraft): RectF? {
+        if (!promoDraft.showLogo) return null
+        val logoBitmap = LogoManager.getLogoBitmap(context) ?: return null
+        val logoAspect = if (logoBitmap.height > 0) logoBitmap.width.toFloat() / logoBitmap.height.toFloat() else 1f
+        val cardTop = 180f
+        val baseH = 115f
+        val baseW = min(360f, baseH * logoAspect)
+        val baseCenterY = cardTop + 42f + baseH / 2f
+        val baseCenterX = VIRTUAL_WIDTH / 2f
+
+        val scale = promoDraft.logoScale.coerceIn(0.4f, 2.5f)
+        val scaledW = baseW * scale
+        val scaledH = baseH * scale
+
+        val cx = (baseCenterX + promoDraft.logoOffsetX).coerceIn(scaledW / 2f, VIRTUAL_WIDTH - scaledW / 2f)
+        val cy = (baseCenterY + promoDraft.logoOffsetY).coerceIn(scaledH / 2f, VIRTUAL_HEIGHT - scaledH / 2f)
+
+        return RectF(cx - scaledW / 2f, cy - scaledH / 2f, cx + scaledW / 2f, cy + scaledH / 2f)
     }
 
     private fun drawPromoLogo(canvas: Canvas, logoBitmap: Bitmap, bounds: RectF, logoMode: String) {

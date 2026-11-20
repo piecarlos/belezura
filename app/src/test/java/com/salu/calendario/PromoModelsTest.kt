@@ -36,7 +36,12 @@ class PromoModelsTest {
                 PromoLineItem("Design Sobrancelhas", "R$ 35,00")
             ),
             footerCta = "Chama no WhatsApp!",
-            showLogo = false
+            showLogo = false,
+            titleFont = "CINZEL_BOLD",
+            accentColorHex = "#D4AF37",
+            logoScale = 1.35f,
+            logoOffsetX = -45f,
+            logoOffsetY = 120f
         )
 
         val jsonStr = original.toJson()
@@ -48,11 +53,50 @@ class PromoModelsTest {
         assertEquals(original.subtitle, parsed.subtitle)
         assertEquals(original.footerCta, parsed.footerCta)
         assertEquals(original.showLogo, parsed.showLogo)
+        assertEquals(original.titleFont, parsed.titleFont)
+        assertEquals(original.accentColorHex, parsed.accentColorHex)
+        assertEquals(original.logoScale, parsed.logoScale, 0.001f)
+        assertEquals(original.logoOffsetX, parsed.logoOffsetX, 0.001f)
+        assertEquals(original.logoOffsetY, parsed.logoOffsetY, 0.001f)
         assertEquals(original.items.size, parsed.items.size)
         for (i in original.items.indices) {
             assertEquals(original.items[i].label, parsed.items[i].label)
             assertEquals(original.items[i].value, parsed.items[i].value)
         }
+    }
+
+    @Test
+    fun testLegacyJsonBackwardCompatibility() {
+        // Simulates a JSON saved in Sprint C.1 without titleFont, accentColorHex, logoScale, logoOffsetX, logoOffsetY
+        val legacyJson = """
+            {
+                "templateType": "AGENDA_ABERTA",
+                "badgeText": "VAGAS DA SEMANA",
+                "title": "Agenda Aberta",
+                "subtitle": "Reserve seu horário",
+                "footerCta": "WhatsApp no perfil",
+                "showLogo": true,
+                "items": [
+                    {"label": "Sexta", "value": "14:00"}
+                ]
+            }
+        """.trimIndent()
+
+        val parsed = PromoDraft.fromJson(legacyJson)
+        assertEquals("AGENDA_ABERTA", parsed.templateType.name)
+        assertEquals("VAGAS DA SEMANA", parsed.badgeText)
+        assertEquals("Agenda Aberta", parsed.title)
+        assertEquals("Reserve seu horário", parsed.subtitle)
+        assertEquals("WhatsApp no perfil", parsed.footerCta)
+        assertTrue(parsed.showLogo)
+        assertEquals("PLAYFAIR_DISPLAY_BOLD", parsed.titleFont)
+        assertEquals("", parsed.accentColorHex)
+        assertEquals(1.0f, parsed.logoScale, 0.001f)
+        assertEquals(0f, parsed.logoOffsetX, 0.001f)
+        assertEquals(0f, parsed.logoOffsetY, 0.001f)
+        assertEquals(1, parsed.items.size)
+        assertEquals("Sexta", parsed.items[0].label)
+        assertEquals("14:00", parsed.items[0].value)
     }
 
     @Test

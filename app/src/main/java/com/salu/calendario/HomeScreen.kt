@@ -693,7 +693,7 @@ fun HomeScreen(
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = "${summary.namesCount} nomes",
+                                        text = if (summary.namesCount == 1) "1 nome" else "${summary.namesCount} nomes",
                                         fontSize = 12.sp,
                                         color = Color(0xFF2E6B53),
                                         fontWeight = FontWeight.Medium

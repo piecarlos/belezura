@@ -135,4 +135,18 @@ class CalendarEngineTest {
         assertFalse(cells[3].hasRedX)
         assertTrue(cells[3].names.isEmpty())
     }
+
+    @Test
+    fun testEmptyCellProtection() {
+        val ym = YearMonth.of(2027, 2)
+        val cells = CalendarEngine.generateCells(ym, emptyMap())
+        // Slot 0 is empty (before Day 1)
+        val emptySlot = cells[0]
+        assertTrue(emptySlot.dayNumber == null || emptySlot.dayNumber <= 0)
+
+        // Slot 1 is Day 1
+        val realSlot = cells[1]
+        assertFalse(realSlot.dayNumber == null || realSlot.dayNumber <= 0)
+        assertEquals(1, realSlot.dayNumber)
+    }
 }

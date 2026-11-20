@@ -360,7 +360,12 @@ fun EditorScreen(
                     uiState = uiState,
                     onCellClick = { slotIndex ->
                         if (!uiState.isEditMode) {
-                            onCellClick(slotIndex)
+                            val targetCell = uiState.cells.firstOrNull { it.slotIndex == slotIndex }
+                            val isRealDay = targetCell?.dayNumber != null && targetCell.dayNumber > 0
+                            val hasData = targetCell != null && (targetCell.hasRedX || targetCell.names.isNotEmpty())
+                            if (isRealDay || hasData) {
+                                onCellClick(slotIndex)
+                            }
                         }
                     },
                     onElementSelect = { element ->
@@ -518,7 +523,12 @@ fun CalendarCanvasView(
                             } else {
                                 val slot = CalendarRenderer.getCellAt(vx, vy, uiState.layoutConfig, rowCount)
                                 if (slot != null) {
-                                    onCellClick(slot)
+                                    val cell = uiState.cells.firstOrNull { it.slotIndex == slot }
+                                    val isRealDay = cell?.dayNumber != null && cell.dayNumber > 0
+                                    val hasData = cell != null && (cell.hasRedX || cell.names.isNotEmpty())
+                                    if (isRealDay || hasData) {
+                                        onCellClick(slot)
+                                    }
                                 } else if (hit != EditableElement.NONE && hit != EditableElement.GRID_CARD) {
                                     onOpenEditModeWithElement(hit)
                                 }
