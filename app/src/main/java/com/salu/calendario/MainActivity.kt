@@ -192,6 +192,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             AppScreen.PROMO_EDITOR -> {
                 PromoEditorScreen(
                     uiState = uiState,
+                    snackbarHostState = snackbarHostState,
                     onNavigateHome = { viewModel.navigateTo(AppScreen.HOME) },
                     onSelectTemplate = { type -> viewModel.setPromoTemplate(type) },
                     onUpdateDraft = { draft -> viewModel.updatePromoDraft(draft) },
@@ -260,13 +261,15 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             }
         }
 
-        SnackbarHost(
-            hostState = snackbarHostState,
-            modifier = Modifier
-                .align(Alignment.BottomCenter)
-                .navigationBarsPadding()
-                .padding(bottom = if ((uiState.currentScreen == AppScreen.CALENDAR && !uiState.isEditMode) || uiState.currentScreen == AppScreen.PROMO_EDITOR) 80.dp else 16.dp)
-        )
+        if (uiState.currentScreen != AppScreen.PROMO_EDITOR) {
+            SnackbarHost(
+                hostState = snackbarHostState,
+                modifier = Modifier
+                    .align(Alignment.BottomCenter)
+                    .navigationBarsPadding()
+                    .padding(bottom = if (uiState.currentScreen == AppScreen.CALENDAR && !uiState.isEditMode) 80.dp else 16.dp)
+            )
+        }
     }
 
     // Modal BottomSheet for Cell Editing

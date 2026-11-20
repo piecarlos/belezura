@@ -336,10 +336,10 @@ object PromoRenderer {
         accentColor: Int
     ) {
         val count = items.size
-        val itemHeight = if (count <= 4) 124f else 108f
-        val spacing = if (count <= 4) 22f else 16f
+        val itemHeight = if (count <= 3) 145f else if (count <= 4) 128f else 110f
+        val spacing = if (count <= 3) 28f else if (count <= 4) 22f else 16f
         val totalHeight = count * itemHeight + (count - 1) * spacing
-        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
+        val startY = top + max(0f, (availableHeight - totalHeight) * 0.28f)
 
         val labelTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val valueTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
@@ -405,9 +405,9 @@ object PromoRenderer {
         accentColor: Int
     ) {
         val count = items.size
-        val rowHeight = if (count <= 4) 100f else if (count == 5) 90f else 82f
+        val rowHeight = if (count <= 3) 125f else if (count == 4) 110f else if (count == 5) 96f else 84f
         val totalHeight = count * rowHeight
-        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
+        val startY = top + max(0f, (availableHeight - totalHeight) * 0.28f)
 
         val labelTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val priceTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
@@ -488,10 +488,10 @@ object PromoRenderer {
         highlightColor: Int
     ) {
         val count = items.size
-        val itemHeight = if (count <= 3) 136f else if (count <= 4) 120f else 105f
-        val spacing = if (count <= 3) 24f else 18f
+        val itemHeight = if (count <= 3) 150f else if (count <= 4) 134f else 112f
+        val spacing = if (count <= 3) 26f else if (count <= 4) 20f else 16f
         val totalHeight = count * itemHeight + (count - 1) * spacing
-        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
+        val startY = top + max(0f, (availableHeight - totalHeight) * 0.28f)
 
         val titleTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val valueTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)

@@ -58,6 +58,8 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -89,6 +91,7 @@ import androidx.compose.ui.unit.sp
 @Composable
 fun PromoEditorScreen(
     uiState: CalendarUiState,
+    snackbarHostState: SnackbarHostState? = null,
     onNavigateHome: () -> Unit,
     onSelectTemplate: (PromoTemplateType) -> Unit,
     onUpdateDraft: (PromoDraft) -> Unit,
@@ -102,6 +105,11 @@ fun PromoEditorScreen(
     var showEditTextsSheet by rememberSaveable { mutableStateOf(false) }
 
     Scaffold(
+        snackbarHost = {
+            snackbarHostState?.let {
+                SnackbarHost(it)
+            }
+        },
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(
