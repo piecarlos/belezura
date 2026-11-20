@@ -586,7 +586,42 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             _uiState.update { it.copy(proPreviewTheme = theme) }
             return
         }
-        val updated = _uiState.value.layoutConfig.copy(selectedThemeId = theme.id)
+        if (BackgroundManager.hasCustomBackground(getApplication())) {
+            BackgroundManager.restoreDefaultBackground(getApplication())
+            _uiState.update { it.copy(hasCustomBackground = false) }
+        }
+        val current = _uiState.value.layoutConfig
+        val mColor = try {
+            android.graphics.Color.parseColor(theme.palette.monthColorHex)
+        } catch (_: Exception) { current.monthColor }
+        val yColor = try {
+            android.graphics.Color.parseColor(theme.palette.yearColorHex)
+        } catch (_: Exception) { current.yearColor }
+        val cColor = try {
+            android.graphics.Color.parseColor(theme.palette.calendarAccentHex)
+        } catch (_: Exception) { current.cardAccentColor }
+
+        var updated = current.copy(
+            selectedThemeId = theme.id,
+            monthColor = mColor,
+            yearColor = yColor,
+            cardAccentColor = cColor,
+            cardScale = theme.palette.defaultCalendarScale,
+            cardOffsetX = 0f
+        )
+        theme.palette.suggestedMonthFont?.let { font ->
+            updated = updated.copy(monthFont = font)
+        }
+        theme.palette.suggestedYearFont?.let { font ->
+            updated = updated.copy(yearFont = font)
+        }
+        theme.palette.defaultMonthScale?.let { mScale ->
+            updated = updated.copy(monthScale = mScale)
+        }
+        theme.palette.defaultYearScale?.let { yScale ->
+            updated = updated.copy(yearScale = yScale)
+        }
+
         _uiState.update { it.copy(layoutConfig = updated) }
         saveLayoutConfig(updated)
         showSnackbar("Tema aplicado: ${theme.name}")

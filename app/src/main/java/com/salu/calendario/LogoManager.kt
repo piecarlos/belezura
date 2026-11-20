@@ -15,8 +15,8 @@ import kotlin.math.roundToInt
 
 enum class LogoDisplayMode(val displayName: String, val description: String) {
     ORIGINAL("Original", "Preserva cores e transparência original"),
-    REMOVE_WHITE("Sem fundo branco", "Mescla fundos brancos comuns via Multiply"),
-    CIRCLE_BADGE("Selo redondo", "Recorte circular com fundo branco e borda sutil")
+    REMOVE_WHITE("Sem fundo", "Mescla fundos brancos comuns via Multiply"),
+    CIRCLE_BADGE("Redondo", "Recorte circular com fundo branco e borda sutil")
 }
 
 object LogoManager {

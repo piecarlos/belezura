@@ -2,6 +2,7 @@ package com.salu.calendario
 
 import android.content.Context
 import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
@@ -13,7 +14,7 @@ import android.graphics.Shader
 object ThemeCatalog : ThemeRepository {
 
     private val themeList = listOf(
-        // 4 Temas Gratuitos (100% funcionais imediatamente)
+        // Temas Gratuitos (100% funcionais imediatamente)
         ThemeItem(
             id = "floral_default",
             name = "Floral Clássico",
@@ -21,7 +22,55 @@ object ThemeCatalog : ThemeRepository {
             isPro = false,
             sourceType = ThemeSourceType.BUILTIN,
             accentHex = "#E64886",
-            description = "Tema oficial com flores de cerejeira em degradê suave."
+            drawableResId = R.drawable.bg_base,
+            description = "Tema oficial com flores de cerejeira em degradê suave.",
+            palette = ThemePalette(
+                monthColorHex = "#5E2326",
+                yearColorHex = "#E64886",
+                calendarAccentHex = "#E89BAE",
+                backgroundBaseHex = "#FFF5F8",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 1.0f
+            )
+        ),
+        ThemeItem(
+            id = "make_glam_luxo",
+            name = "Make Glam Luxo",
+            category = ThemeCategory.FLORAL,
+            isPro = false,
+            sourceType = ThemeSourceType.BUILTIN,
+            accentHex = "#B89047",
+            drawableResId = R.drawable.bg_make_glam,
+            description = "Moldura elegante com maquiagem e detalhes em ouro e rosé.",
+            palette = ThemePalette(
+                monthColorHex = "#5C2E3E",
+                yearColorHex = "#B89047",
+                calendarAccentHex = "#E2B4BD",
+                backgroundBaseHex = "#FFF5F8",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "make_glam_floral",
+            name = "Make Glam Floral",
+            category = ThemeCategory.FLORAL,
+            isPro = false,
+            sourceType = ThemeSourceType.BUILTIN,
+            accentHex = "#C98A95",
+            drawableResId = R.drawable.bg_make_glam_2,
+            description = "Composição glamourosa com flores suaves e pincéis de maquiagem.",
+            palette = ThemePalette(
+                monthColorHex = "#5C2E3E",
+                yearColorHex = "#C98A95",
+                calendarAccentHex = "#E2B4BD",
+                backgroundBaseHex = "#FFF5F8",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.88f
+            )
         ),
         ThemeItem(
             id = "minimal_cream",
@@ -30,7 +79,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = false,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#C4A882",
-            description = "Fundo creme aconchegante com moldura geométrica fina."
+            description = "Fundo creme aconchegante com moldura geométrica fina.",
+            palette = ThemePalette(
+                monthColorHex = "#4A3F35",
+                yearColorHex = "#8C735B",
+                calendarAccentHex = "#C8B6A6",
+                backgroundBaseHex = "#FAF6F2",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "rose_editorial",
@@ -39,7 +97,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = false,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#E56B6F",
-            description = "Degradê rosé e champagne com detalhes delicados."
+            description = "Degradê rosé e champagne com detalhes delicados.",
+            palette = ThemePalette(
+                monthColorHex = "#6B3A46",
+                yearColorHex = "#C97B84",
+                calendarAccentHex = "#E2B4BD",
+                backgroundBaseHex = "#FFF2F5",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "luxury_gold",
@@ -48,7 +115,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = false,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#C9972B",
-            description = "Fundo claro nobre com moldura dupla em tom dourado."
+            description = "Fundo claro nobre com moldura dupla em tom dourado.",
+            palette = ThemePalette(
+                monthColorHex = "#3E3224",
+                yearColorHex = "#B89047",
+                calendarAccentHex = "#C9A86A",
+                backgroundBaseHex = "#FDFBF7",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
 
         // 6 Temas de Prévia PRO (com selo de diamante transparente)
@@ -60,7 +136,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#D4AF37",
-            description = "Estética premium para a maior data promocional do ano."
+            description = "Estética premium para a maior data promocional do ano.",
+            palette = ThemePalette(
+                monthColorHex = "#D4AF37",
+                yearColorHex = "#F3E5AB",
+                calendarAccentHex = "#D4AF37",
+                backgroundBaseHex = "#1C1A1C",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "mothers_day_floral",
@@ -70,7 +155,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#E64886",
-            description = "Tons suaves de rosa e flores delicadas para homenagens."
+            description = "Tons suaves de rosa e flores delicadas para homenagens.",
+            palette = ThemePalette(
+                monthColorHex = "#6B2B44",
+                yearColorHex = "#E64886",
+                calendarAccentHex = "#EAAEC0",
+                backgroundBaseHex = "#FFF4F7",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "valentines_romance",
@@ -80,7 +174,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#C62828",
-            description = "Clima romântico e tons rubi para produções especiais."
+            description = "Clima romântico e tons rubi para produções especiais.",
+            palette = ThemePalette(
+                monthColorHex = "#5C1518",
+                yearColorHex = "#C62828",
+                calendarAccentHex = "#E57373",
+                backgroundBaseHex = "#FFF1F3",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "pink_october",
@@ -90,7 +193,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#FF69B4",
-            description = "Conscientização feminina com tons vibrantes de rosa."
+            description = "Conscientização feminina com tons vibrantes de rosa.",
+            palette = ThemePalette(
+                monthColorHex = "#7A1C48",
+                yearColorHex = "#FF4081",
+                calendarAccentHex = "#F48FB1",
+                backgroundBaseHex = "#FFF0F5",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "christmas_gold",
@@ -100,7 +212,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#C9972B",
-            description = "Brilho e sofisticação para fechar o ano com agenda cheia."
+            description = "Brilho e sofisticação para fechar o ano com agenda cheia.",
+            palette = ThemePalette(
+                monthColorHex = "#521419",
+                yearColorHex = "#C9972B",
+                calendarAccentHex = "#E2BA62",
+                backgroundBaseHex = "#FAF7EF",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         ),
         ThemeItem(
             id = "summer_tropical",
@@ -110,7 +231,16 @@ object ThemeCatalog : ThemeRepository {
             isPro = true,
             sourceType = ThemeSourceType.PROCEDURAL,
             accentHex = "#2E6B53",
-            description = "Luminosidade natural e frescor para a temporada de praia."
+            description = "Luminosidade natural e frescor para a temporada de praia.",
+            palette = ThemePalette(
+                monthColorHex = "#164E3B",
+                yearColorHex = "#2E6B53",
+                calendarAccentHex = "#80CBC4",
+                backgroundBaseHex = "#F8FBF8",
+                suggestedMonthFont = HeaderFontOption.FREDOKA_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.90f
+            )
         )
     )
 
@@ -139,9 +269,26 @@ object ThemeCatalog : ThemeRepository {
             return BackgroundManager.getBackgroundBitmap(context)
         }
 
-        // Cache procedural
+        // Cache procedural / drawable
         proceduralCache[themeId]?.let {
             if (!it.isRecycled) return it
+        }
+
+        val theme = getThemeById(themeId)
+        if (theme?.drawableResId != null) {
+            val options = BitmapFactory.Options().apply {
+                inScaled = false
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+            val loaded = try {
+                BitmapFactory.decodeResource(context.resources, theme.drawableResId, options)
+            } catch (e: Exception) {
+                null
+            }
+            if (loaded != null) {
+                proceduralCache[themeId] = loaded
+                return loaded
+            }
         }
 
         val generated = generateProceduralBitmap(themeId)
@@ -165,17 +312,17 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 3f
                 paint.color = Color.parseColor("#D4B895")
-                val outer = RectF(34f, 34f, 1046f, 1886f)
+                val outer = RectF(28f, 28f, 1052f, 1892f)
                 canvas.drawRoundRect(outer, 18f, 18f, paint)
 
                 // Moldura interna delicada
                 paint.strokeWidth = 1.2f
                 paint.color = Color.parseColor("#E6D6C4")
-                val inner = RectF(48f, 48f, 1032f, 1872f)
+                val inner = RectF(44f, 44f, 1036f, 1876f)
                 canvas.drawRoundRect(inner, 12f, 12f, paint)
 
                 // Detalhes geométricos sutis nos 4 cantos
-                drawCornerDiamonds(canvas, 34f, 34f, 1046f, 1886f, Color.parseColor("#C4A882"))
+                drawCornerDiamonds(canvas, 28f, 28f, 1052f, 1892f, Color.parseColor("#C4A882"))
             }
 
             "rose_editorial" -> {
@@ -194,11 +341,11 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 2.5f
                 paint.color = Color.parseColor("#E8A8BA")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 24f, 24f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 24f, 24f, paint)
 
                 paint.strokeWidth = 1.2f
                 paint.color = Color.parseColor("#E8D2C2")
-                canvas.drawRoundRect(RectF(48f, 48f, 1032f, 1872f), 18f, 18f, paint)
+                canvas.drawRoundRect(RectF(44f, 44f, 1036f, 1876f), 18f, 18f, paint)
             }
 
             "luxury_gold" -> {
@@ -209,14 +356,14 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 4f
                 paint.color = Color.parseColor("#D4AF37")
-                canvas.drawRoundRect(RectF(32f, 32f, 1048f, 1888f), 16f, 16f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 16f, 16f, paint)
 
                 // Moldura interna fina
                 paint.strokeWidth = 1.5f
                 paint.color = Color.parseColor("#E8D69A")
-                canvas.drawRoundRect(RectF(46f, 46f, 1034f, 1874f), 10f, 10f, paint)
+                canvas.drawRoundRect(RectF(44f, 44f, 1036f, 1876f), 10f, 10f, paint)
 
-                drawCornerDiamonds(canvas, 32f, 32f, 1048f, 1888f, Color.parseColor("#D4AF37"))
+                drawCornerDiamonds(canvas, 28f, 28f, 1052f, 1892f, Color.parseColor("#D4AF37"))
             }
 
             // Prévias procedurais dos temas PRO
@@ -234,7 +381,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 3f
                 paint.color = Color.parseColor("#D4AF37")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 20f, 20f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 20f, 20f, paint)
             }
 
             "mothers_day_floral" -> {
@@ -251,7 +398,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 2.5f
                 paint.color = Color.parseColor("#E64886")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 22f, 22f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 22f, 22f, paint)
             }
 
             "valentines_romance" -> {
@@ -268,7 +415,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 2.5f
                 paint.color = Color.parseColor("#C62828")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 20f, 20f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 20f, 20f, paint)
             }
 
             "pink_october" -> {
@@ -285,7 +432,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 2.5f
                 paint.color = Color.parseColor("#FF69B4")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 20f, 20f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 20f, 20f, paint)
             }
 
             "christmas_gold" -> {
@@ -302,7 +449,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 3f
                 paint.color = Color.parseColor("#C9972B")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 20f, 20f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 20f, 20f, paint)
             }
 
             "summer_tropical" -> {
@@ -319,7 +466,7 @@ object ThemeCatalog : ThemeRepository {
                 paint.style = Paint.Style.STROKE
                 paint.strokeWidth = 2.5f
                 paint.color = Color.parseColor("#2E6B53")
-                canvas.drawRoundRect(RectF(36f, 36f, 1044f, 1884f), 20f, 20f, paint)
+                canvas.drawRoundRect(RectF(28f, 28f, 1052f, 1892f), 20f, 20f, paint)
             }
 
             else -> {

@@ -62,7 +62,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -333,30 +335,137 @@ fun ThemeCard(
         elevation = CardDefaults.cardElevation(defaultElevation = if (isSelected) 4.dp else 1.dp)
     ) {
         Box(modifier = Modifier.fillMaxSize()) {
-            // Background preview gradient or styling
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(
-                        Brush.verticalGradient(
-                            colors = listOf(
-                                accentColor.copy(alpha = 0.15f),
-                                Color.White,
-                                accentColor.copy(alpha = 0.25f)
-                            )
+            // Background preview: real image for builtin/drawable themes or faithful gradient for others
+            if (theme.drawableResId != null) {
+                Image(
+                    painter = painterResource(id = theme.drawableResId),
+                    contentDescription = theme.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else if (theme.id == "floral_default") {
+                Image(
+                    painter = painterResource(id = R.drawable.bg_base),
+                    contentDescription = theme.name,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                val bgBrush = remember(theme.id) {
+                    when (theme.id) {
+                        "black_friday_glam" -> Brush.verticalGradient(
+                            listOf(Color(0xFF141314), Color(0xFF282226))
                         )
-                    )
-            )
+                        "rose_editorial" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFFF2F5), Color(0xFFFDF7F0))
+                        )
+                        "mothers_day_floral" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFFF4F7), Color(0xFFFBE8EE))
+                        )
+                        "valentines_romance" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFFF1F3), Color(0xFFFCE4E8))
+                        )
+                        "pink_october" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFFF0F5), Color(0xFFFCE0EA))
+                        )
+                        "christmas_gold" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFAF7EF), Color(0xFFF5EEDD))
+                        )
+                        "summer_tropical" -> Brush.verticalGradient(
+                            listOf(Color(0xFFF8FBF8), Color(0xFFEBF3EE))
+                        )
+                        "minimal_cream" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFAF6F2), Color(0xFFF3ECE4))
+                        )
+                        "luxury_gold" -> Brush.verticalGradient(
+                            listOf(Color(0xFFFDFBF7), Color(0xFFF7F2E7))
+                        )
+                        else -> Brush.verticalGradient(
+                            listOf(Color(0xFFFFFFFF), Color(0xFFF5F5F5))
+                        )
+                    }
+                }
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(bgBrush)
+                )
 
-            // Inner Decorative simulation card
+                // Subtle inner frame border
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(5.dp)
+                        .border(
+                            width = if (theme.id == "luxury_gold" || theme.id == "black_friday_glam") 1.dp else 0.6.dp,
+                            color = accentColor.copy(alpha = if (theme.id == "black_friday_glam") 0.6f else 0.4f),
+                            shape = RoundedCornerShape(6.dp)
+                        )
+                )
+            }
+
+            // Subtle calendar grid mini-sketch in center
+            val isDark = (theme.id == "black_friday_glam")
             Box(
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(8.dp)
-                    .clip(RoundedCornerShape(6.dp))
-                    .background(Color.White.copy(alpha = 0.7f))
-                    .border(0.5.dp, accentColor.copy(alpha = 0.4f), RoundedCornerShape(6.dp))
-            )
+                    .fillMaxWidth(0.82f)
+                    .aspectRatio(0.72f)
+                    .align(Alignment.Center)
+                    .clip(RoundedCornerShape(5.dp))
+                    .background(
+                        if (isDark) Color(0x3DFFFFFF) else Color(0x8AFFFFFF)
+                    )
+                    .border(
+                        0.5.dp,
+                        accentColor.copy(alpha = if (isDark) 0.7f else 0.45f),
+                        RoundedCornerShape(5.dp)
+                    )
+                    .padding(horizontal = 5.dp, vertical = 6.dp)
+            ) {
+                Column(
+                    modifier = Modifier.fillMaxSize(),
+                    verticalArrangement = Arrangement.SpaceBetween
+                ) {
+                    // Mini header: Month/Year simulated indicator
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .width(30.dp)
+                                .height(3.5.dp)
+                                .clip(RoundedCornerShape(2.dp))
+                                .background(accentColor.copy(alpha = 0.85f))
+                        )
+                    }
+
+                    // Mini calendar grid dots: 4 rows of 5 dots
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(3.dp)
+                    ) {
+                        repeat(4) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                horizontalArrangement = Arrangement.SpaceEvenly
+                            ) {
+                                repeat(5) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(3.5.dp)
+                                            .clip(CircleShape)
+                                            .background(
+                                                if (isDark) accentColor.copy(alpha = 0.75f)
+                                                else accentColor.copy(alpha = 0.45f)
+                                            )
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             // PRO Diamond Badge
             if (theme.isPro) {
@@ -411,8 +520,8 @@ fun ThemeCard(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
-                    .background(Color.White.copy(alpha = 0.92f))
-                    .padding(horizontal = 6.dp, vertical = 6.dp)
+                    .background(Color.White.copy(alpha = 0.94f))
+                    .padding(horizontal = 4.dp, vertical = 5.dp)
             ) {
                 Text(
                     text = theme.name,

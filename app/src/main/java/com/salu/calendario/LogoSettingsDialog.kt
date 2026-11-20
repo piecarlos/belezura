@@ -200,16 +200,23 @@ fun LogoSettingsDialog(
                     Spacer(Modifier.height(4.dp))
 
                     Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
                     ) {
                         LogoDisplayMode.values().forEach { mode ->
                             FilterChip(
+                                modifier = Modifier.weight(1f),
                                 selected = logoMode == mode.name,
                                 onClick = { onModeChange(mode.name) },
-                                label = { Text(mode.displayName, fontSize = 11.sp) },
+                                label = {
+                                    Text(
+                                        text = mode.displayName,
+                                        fontSize = 11.sp,
+                                        maxLines = 1,
+                                        textAlign = TextAlign.Center,
+                                        modifier = Modifier.fillMaxWidth()
+                                    )
+                                },
                                 colors = FilterChipDefaults.filterChipColors(
                                     selectedContainerColor = Color(0xFFB82B62),
                                     selectedLabelColor = Color.White
