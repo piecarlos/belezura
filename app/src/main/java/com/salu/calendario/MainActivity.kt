@@ -76,6 +76,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
 
     var showDatePickerDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeGallerySheet by rememberSaveable { mutableStateOf(false) }
+    var themeGalleryInitialCategory by rememberSaveable { mutableStateOf(ThemeCategory.ALL) }
     var showLogoSettingsDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestoreConfirmDialog by rememberSaveable { mutableStateOf(false) }
@@ -167,7 +168,14 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onExportBackup = launchExportBackup,
                     onImportBackup = launchImportBackup,
                     onOpenQuickDatePicker = { showDatePickerDialog = true },
-                    onOpenThemeGallery = { showThemeGallerySheet = true }
+                    onOpenThemeGallery = { category ->
+                        themeGalleryInitialCategory = category
+                        showThemeGallerySheet = true
+                    },
+                    onOpenLogoSettings = { showLogoSettingsDialog = true },
+                    onOpenPromotions = {
+                        viewModel.showSnackbar("O criador de Stories de Promoção e Avisos chega na próxima atualização ✨")
+                    }
                 )
             }
             AppScreen.CALENDAR -> {
@@ -185,7 +193,10 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onUndo = { viewModel.undo() },
                     onRedo = { viewModel.redo() },
                     onToggleEditMode = { viewModel.toggleEditMode() },
-                    onOpenBgDialog = { showThemeGallerySheet = true },
+                    onOpenBgDialog = {
+                        themeGalleryInitialCategory = ThemeCategory.ALL
+                        showThemeGallerySheet = true
+                    },
                     onExportBackup = launchExportBackup,
                     onImportBackup = launchImportBackup,
                     onRequestStoragePermission = {
@@ -284,6 +295,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             currentThemeId = uiState.layoutConfig.selectedThemeId,
             hasCustomBackground = uiState.hasCustomBackground,
             hasCustomLogo = uiState.hasCustomLogo,
+            initialCategory = themeGalleryInitialCategory,
             onSelectTheme = { theme ->
                 viewModel.selectTheme(theme)
             },

@@ -77,6 +77,7 @@ fun ThemeGallerySheet(
     currentThemeId: String,
     hasCustomBackground: Boolean,
     hasCustomLogo: Boolean,
+    initialCategory: ThemeCategory = ThemeCategory.ALL,
     onSelectTheme: (ThemeItem) -> Unit,
     onPickCustomBackground: () -> Unit,
     onResetToDefaultBackground: () -> Unit,
@@ -84,7 +85,7 @@ fun ThemeGallerySheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
-    var selectedCategory by remember { mutableStateOf(ThemeCategory.ALL) }
+    var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
     val seasonalHighlight = remember { SeasonalRadar.getActiveCampaign() }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 

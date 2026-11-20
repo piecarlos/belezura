@@ -2,11 +2,8 @@ package com.salu.calendario
 
 import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -20,7 +17,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
@@ -35,21 +31,18 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.BrandingWatermark
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.CalendarToday
-import androidx.compose.material.icons.filled.Clear
+import androidx.compose.material.icons.filled.Campaign
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.CloudUpload
-import androidx.compose.material.icons.filled.Download
-import androidx.compose.material.icons.filled.Image
-import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
-import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -77,15 +70,15 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import java.text.SimpleDateFormat
 import java.time.YearMonth
-import java.util.Date
 import java.util.Locale
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -101,28 +94,35 @@ fun HomeScreen(
     onExportBackup: () -> Unit,
     onImportBackup: () -> Unit,
     onOpenQuickDatePicker: () -> Unit,
-    onOpenThemeGallery: () -> Unit = {}
+    onOpenThemeGallery: (ThemeCategory) -> Unit = {},
+    onOpenLogoSettings: () -> Unit = {},
+    onOpenPromotions: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
     val scrollState = rememberScrollState()
 
-    var showBgDialog by rememberSaveable { mutableStateOf(false) }
     var showBackupMenu by rememberSaveable { mutableStateOf(false) }
-
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
-    ) { uri ->
-        if (uri != null) {
-            onCustomBackgroundPicked(uri)
-        }
-    }
 
     // Active month summary calculation
     val activeYm = uiState.currentYearMonth
-    val activeSummary = uiState.savedMonthsSummaries.firstOrNull { it.yearMonth == activeYm }
-    val activeNamesCount = activeSummary?.namesCount ?: uiState.cells.sumOf { it.names.size }
-    val activeRedXCount = activeSummary?.redXCount ?: uiState.cells.count { it.hasRedX }
+    val monthDays = uiState.cells.filter { it.dayNumber != null }
+    val activeNamesCount = if (monthDays.isNotEmpty()) {
+        monthDays.sumOf { it.names.size }
+    } else {
+        uiState.savedMonthsSummaries.firstOrNull { it.yearMonth == activeYm }?.namesCount ?: 0
+    }
+    val activeRedXCount = if (monthDays.isNotEmpty()) {
+        monthDays.count { it.hasRedX }
+    } else {
+        uiState.savedMonthsSummaries.firstOrNull { it.yearMonth == activeYm }?.redXCount ?: 0
+    }
+    val activeFreeDays = if (monthDays.isNotEmpty()) {
+        monthDays.count { !it.hasRedX && it.names.isEmpty() }
+    } else {
+        val totalDays = activeYm.lengthOfMonth()
+        (totalDays - activeRedXCount).coerceAtLeast(0)
+    }
 
     Surface(
         modifier = Modifier
@@ -136,9 +136,9 @@ fun HomeScreen(
                 .fillMaxSize()
                 .verticalScroll(scrollState)
                 .padding(horizontal = 20.dp, vertical = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(18.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
-            // 1. Header Block
+            // 1. Header Block (Belezura Hub)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -146,13 +146,13 @@ fun HomeScreen(
             ) {
                 Column {
                     Text(
-                        text = "Agenda Salú",
+                        text = "Belezura",
                         fontSize = 28.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF5E2326)
                     )
                     Text(
-                        text = "Painel rápido e gerador de agendas",
+                        text = "Seu estúdio organizado e bonito",
                         fontSize = 13.sp,
                         color = Color(0xFF8C5A60)
                     )
@@ -169,7 +169,7 @@ fun HomeScreen(
                         imageVector = Icons.Default.CalendarMonth,
                         contentDescription = "Logo",
                         tint = Color(0xFFB82B62),
-                        modifier = Modifier.size(26.dp)
+                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -181,7 +181,9 @@ fun HomeScreen(
                     .shadow(6.dp, RoundedCornerShape(18.dp)),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
                 shape = RoundedCornerShape(18.dp),
-                border = CardDefaults.outlinedCardBorder().copy(brush = Brush.linearGradient(listOf(Color(0xFFE89BAE), Color(0xFFFCEBF1))))
+                border = CardDefaults.outlinedCardBorder().copy(
+                    brush = Brush.linearGradient(listOf(Color(0xFFE89BAE), Color(0xFFFCEBF1)))
+                )
             ) {
                 Column(
                     modifier = Modifier
@@ -209,20 +211,90 @@ fun HomeScreen(
                                 color = Color(0xFF5E2326)
                             )
                         }
+                    }
 
-                        // Status badges
-                        Column(horizontalAlignment = Alignment.End) {
-                            Text(
-                                text = "$activeNamesCount agendamento${if (activeNamesCount == 1) "" else "s"}",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = Color(0xFF2E6B53)
-                            )
-                            if (activeRedXCount > 0) {
+                    // 3 Counter Badges Side-by-Side (Agendamentos | Dias Fechados | Dias Livres)
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Agendamentos
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFF1F8F5),
+                            border = BorderStroke(1.dp, Color(0xFFC8E6C9))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
                                 Text(
-                                    text = "$activeRedXCount dia${if (activeRedXCount == 1) "" else "s"} com 'X'",
-                                    fontSize = 12.sp,
+                                    text = "$activeNamesCount",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E6B53)
+                                )
+                                Text(
+                                    text = if (activeNamesCount == 1) "Cliente" else "Clientes",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFF2E6B53),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        // Fechados (X)
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFFDF2F2),
+                            border = BorderStroke(1.dp, Color(0xFFFFCDD2))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "$activeRedXCount",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
                                     color = Color(0xFFC62828)
+                                )
+                                Text(
+                                    text = "Fechados",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFC62828),
+                                    maxLines = 1
+                                )
+                            }
+                        }
+
+                        // Dias Livres
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(10.dp),
+                            color = Color(0xFFFDF6EC),
+                            border = BorderStroke(1.dp, Color(0xFFFFE0B2))
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 8.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = "$activeFreeDays",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB57019)
+                                )
+                                Text(
+                                    text = "Livres",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Medium,
+                                    color = Color(0xFFB57019),
+                                    maxLines = 1
                                 )
                             }
                         }
@@ -243,7 +315,7 @@ fun HomeScreen(
                         ) {
                             Icon(Icons.Default.CalendarToday, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(8.dp))
-                            Text("Abrir Agenda", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text("Editar Agenda", fontWeight = FontWeight.Bold, fontSize = 14.sp)
                         }
 
                         OutlinedButton(
@@ -273,7 +345,165 @@ fun HomeScreen(
                 }
             }
 
-            // 3. Client Search Box
+            // 3. Seasonal Radar Highlight Card
+            val activeCampaign = remember { SeasonalRadar.getActiveCampaign() }
+            if (activeCampaign != null) {
+                val countdownBadge = when {
+                    activeCampaign.daysRemaining == 0L -> "Hoje!"
+                    activeCampaign.daysRemaining == 1L -> "Amanhã"
+                    else -> "Em ${activeCampaign.daysRemaining} dias"
+                }
+
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .shadow(4.dp, RoundedCornerShape(16.dp))
+                        .clickable { onOpenThemeGallery(ThemeCategory.SEASONAL) },
+                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9FA)),
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.dp, Color(0xFFF3C7D4))
+                ) {
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.AutoAwesome,
+                                    contentDescription = null,
+                                    tint = Color(0xFFB82B62),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Text(
+                                    text = "RADAR SAZONAL",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB82B62),
+                                    letterSpacing = 1.sp
+                                )
+                            }
+
+                            Surface(
+                                shape = RoundedCornerShape(12.dp),
+                                color = Color(0xFFFCEBF1),
+                                border = BorderStroke(1.dp, Color(0xFFE89BAE))
+                            ) {
+                                Text(
+                                    text = countdownBadge,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB82B62),
+                                    modifier = Modifier.padding(horizontal = 8.dp, vertical = 3.dp)
+                                )
+                            }
+                        }
+
+                        Text(
+                            text = activeCampaign.title,
+                            fontSize = 17.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF5E2326)
+                        )
+
+                        Text(
+                            text = activeCampaign.subtitle,
+                            fontSize = 12.sp,
+                            color = Color(0xFF6E5055),
+                            lineHeight = 16.sp
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(top = 2.dp),
+                            horizontalArrangement = Arrangement.End,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Ver Molduras em Alta →",
+                                fontSize = 12.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB82B62)
+                            )
+                        }
+                    }
+                }
+            }
+
+            // 4. Quick Actions Hub (2x2 Grid)
+            Column(modifier = Modifier.fillMaxWidth()) {
+                Text(
+                    text = "Ações Rápidas",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF5E2326),
+                    modifier = Modifier.padding(bottom = 10.dp)
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Item 1: Agenda do Mês
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.CalendarToday,
+                        title = "Agenda do Mês",
+                        subtitle = "Editar e organizar",
+                        onClick = { onOpenEditorForMonth(activeYm) }
+                    )
+
+                    // Item 2: Criar Promoção (Em breve)
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Campaign,
+                        title = "Criar Promoção",
+                        subtitle = "Stories e avisos",
+                        badgeText = "Em breve",
+                        onClick = onOpenPromotions
+                    )
+                }
+
+                Spacer(Modifier.height(10.dp))
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    // Item 3: Molduras & Temas
+                    val currentThemeName = remember(uiState.layoutConfig.selectedThemeId) {
+                        ThemeCatalog.getThemeById(uiState.layoutConfig.selectedThemeId)?.name ?: "Floral Clássico"
+                    }
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.AutoAwesome,
+                        title = "Molduras & Temas",
+                        subtitle = if (uiState.hasCustomBackground) "Personalizada" else currentThemeName,
+                        onClick = { onOpenThemeGallery(ThemeCategory.ALL) }
+                    )
+
+                    // Item 4: Minha Logo
+                    QuickActionCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.AutoMirrored.Filled.BrandingWatermark,
+                        title = "Minha Logo",
+                        subtitle = if (uiState.hasCustomLogo) "Configurada" else "Adicionar marca",
+                        onClick = onOpenLogoSettings
+                    )
+                }
+            }
+
+            // 5. Client Search Box
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF5F7)),
@@ -370,7 +600,7 @@ fun HomeScreen(
                 }
             }
 
-            // 4. "Meus Meses" Section
+            // 6. "Meus Meses" Section
             Column(modifier = Modifier.fillMaxWidth()) {
                 Row(
                     modifier = Modifier
@@ -381,7 +611,7 @@ fun HomeScreen(
                 ) {
                     Text(
                         text = "Meus Meses (${uiState.savedMonthsSummaries.size})",
-                        fontSize = 16.sp,
+                        fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF5E2326)
                     )
@@ -400,7 +630,7 @@ fun HomeScreen(
                         shape = RoundedCornerShape(12.dp)
                     ) {
                         Text(
-                            text = "Nenhum outro mês salvo ainda. Toque em 'Abrir Agenda' acima para começar a preencher!",
+                            text = "Nenhum outro mês salvo ainda. Toque em 'Editar Agenda' acima para começar a preencher!",
                             fontSize = 13.sp,
                             color = Color.Gray,
                             modifier = Modifier.padding(14.dp)
@@ -460,112 +690,142 @@ fun HomeScreen(
                 }
             }
 
-            // 5. Maintenance Shortcuts (Footer)
-            Column(modifier = Modifier.fillMaxWidth()) {
-                Text(
-                    text = "Aparência e Backup",
-                    fontSize = 14.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = Color(0xFF5E2326),
-                    modifier = Modifier.padding(bottom = 8.dp)
-                )
-
+            // 7. Security & Backup Section
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showBackupMenu = true },
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF7F8)),
+                shape = RoundedCornerShape(12.dp),
+                border = BorderStroke(1.dp, Color(0xFFF0E4E8))
+            ) {
                 Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 14.dp, vertical = 12.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    // Backup Card
-                    Box(modifier = Modifier.weight(1f)) {
-                        Card(
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        Box(
                             modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { showBackupMenu = true },
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(12.dp),
-                            border = CardDefaults.outlinedCardBorder()
+                                .size(32.dp)
+                                .background(Color(0xFFFCEBF1), CircleShape),
+                            contentAlignment = Alignment.Center
                         ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(18.dp))
-                                    Text("Backup (.json)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                val backupSubtitle = uiState.lastBackupTimeFormatted?.let { "Último: $it" } ?: "Nenhum backup ainda"
-                                Text(text = backupSubtitle, fontSize = 11.sp, color = Color.Gray)
-                            }
+                            Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(16.dp))
                         }
-
-                        DropdownMenu(
-                            expanded = showBackupMenu,
-                            onDismissRequest = { showBackupMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text("Exportar backup (.json)") },
-                                leadingIcon = { Icon(Icons.Default.CloudUpload, null) },
-                                onClick = {
-                                    showBackupMenu = false
-                                    onExportBackup()
-                                }
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Restaurar backup (.json)") },
-                                leadingIcon = { Icon(Icons.Default.CloudDownload, null) },
-                                onClick = {
-                                    showBackupMenu = false
-                                    onImportBackup()
-                                }
-                            )
+                        Column {
+                            Text("Segurança e Backup (.json)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
+                            val backupSubtitle = uiState.lastBackupTimeFormatted?.let { "Último: $it" } ?: "Nenhum backup realizado ainda"
+                            Text(text = backupSubtitle, fontSize = 11.sp, color = Color.Gray)
                         }
                     }
 
-                    // Background & Themes Card
-                    Box(modifier = Modifier.weight(1f)) {
-                        val currentThemeName = remember(uiState.layoutConfig.selectedThemeId) {
-                            ThemeCatalog.getThemeById(uiState.layoutConfig.selectedThemeId)?.name ?: "Floral Clássico"
-                        }
-                        val themeSubtitle = if (uiState.hasCustomBackground) "Foto personalizada" else currentThemeName
+                    Icon(Icons.Default.CloudUpload, contentDescription = null, tint = Color(0xFF8C5A60), modifier = Modifier.size(18.dp))
+                }
 
-                        Card(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { onOpenThemeGallery() },
-                            colors = CardDefaults.cardColors(containerColor = Color.White),
-                            shape = RoundedCornerShape(12.dp),
-                            border = CardDefaults.outlinedCardBorder()
-                        ) {
-                            Column(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp)
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(Icons.Default.AutoAwesome, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(18.dp))
-                                    Text("Molduras e Temas", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
-                                }
-                                Spacer(Modifier.height(4.dp))
-                                Text(
-                                    text = themeSubtitle,
-                                    fontSize = 11.sp,
-                                    color = Color.Gray,
-                                    maxLines = 1
-                                )
-                            }
+                DropdownMenu(
+                    expanded = showBackupMenu,
+                    onDismissRequest = { showBackupMenu = false }
+                ) {
+                    DropdownMenuItem(
+                        text = { Text("Exportar backup (.json)") },
+                        leadingIcon = { Icon(Icons.Default.CloudUpload, null) },
+                        onClick = {
+                            showBackupMenu = false
+                            onExportBackup()
                         }
-                    }
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Restaurar backup (.json)") },
+                        leadingIcon = { Icon(Icons.Default.CloudDownload, null) },
+                        onClick = {
+                            showBackupMenu = false
+                            onImportBackup()
+                        }
+                    )
                 }
             }
 
             Spacer(Modifier.height(10.dp))
+        }
+    }
+}
+
+@Composable
+fun QuickActionCard(
+    modifier: Modifier = Modifier,
+    icon: ImageVector,
+    title: String,
+    subtitle: String,
+    badgeText: String? = null,
+    onClick: () -> Unit
+) {
+    Card(
+        modifier = modifier
+            .height(100.dp)
+            .clickable(onClick = onClick),
+        colors = CardDefaults.cardColors(containerColor = Color.White),
+        shape = RoundedCornerShape(14.dp),
+        border = BorderStroke(1.dp, Color(0xFFF0E4E8))
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(12.dp),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Box(
+                    modifier = Modifier
+                        .size(34.dp)
+                        .background(Color(0xFFFDF0F4), RoundedCornerShape(8.dp)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(icon, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(18.dp))
+                }
+
+                if (badgeText != null) {
+                    Surface(
+                        shape = RoundedCornerShape(6.dp),
+                        color = Color(0xFFF3E5F5)
+                    ) {
+                        Text(
+                            text = badgeText,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color(0xFF7E4EAC),
+                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                        )
+                    }
+                }
+            }
+
+            Column {
+                Text(
+                    text = title,
+                    fontSize = 13.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = Color(0xFF5E2326),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    fontSize = 11.sp,
+                    color = Color.Gray,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
         }
     }
 }

@@ -185,20 +185,6 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
 | **`month_data_YYYY_MM`** | `String (JSON)` | Dados de agendamento de um mês específico (ex: `month_data_2026_12`). |
 | **`last_backup_at`** | `Long` | Timestamp em milissegundos do último backup exportado. |
 
----
-
-## 6. Status Atual das Funcionalidades e Validação
-
-- **Fase A (100% Concluída):**
-  - Identidade visual **Belezura** com Adaptive Icon 3D em alta definição gerado em todas as densidades mipmap com fundo sólido `#5B0224`.
-  - Galeria de molduras integrada (`ThemeGallerySheet`) com temas procedurais e temas fotográficos embutidos (`Make Glam Luxo` e `Make Glam Floral`), exibindo miniaturas reais e aplicando paleta automática (`ThemePalette`) com escala adaptada da grade (`defaultCalendarScale = 0.88f`).
-  - Suporte completo a logomarca no rodapé: diálogo de configuração (`LogoSettingsDialog`), 3 modos visuais (Original, Sem fundo branco, Selo redondo), toque direto na logo no canvas para abrir o painel de ajuste, e gestos de pinça e arraste livre com escala de 50% a 220%.
-- **Suíte de Testes Automatizados:**
-  - `ClientSearchTest.kt`: Validação de busca insensível a acentuação e ordenação multi-mês.
-  - `BackupManagerTest.kt`: Validação de exportação/importação e integridade do schema JSON.
-  - `CalendarEngineTest.kt`: Validação de offset de início de semana e linhas do grid.
-- **Compilação e R8:** Builds `assembleDebug` e `assembleRelease` 100% funcionais, aprovados e validados no emulador `Belezura_Teste`.
-
 ### 5.2 Estrutura do JSON do Mês (`month_data_YYYY_MM`)
 ```json
 {
@@ -284,6 +270,12 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
   - **Galeria de Molduras Integrada (`ThemeGallerySheet`):** Temas procedurais e fotográficos embutidos (`Make Glam Luxo` e `Make Glam Floral`), miniaturas reais geradas, paleta automática (`ThemePalette`) e escala adaptada da grade (`defaultCalendarScale = 0.88f`).
   - **Logomarca Livre em Todo o Canvas:** Diálogo de configuração (`LogoSettingsDialog`), 3 modos visuais (Original, Sem fundo branco, Selo redondo), toque direto na logo no canvas para abrir o painel de ajuste, gestos multi-touch (pinça e arraste livre com escala de 50% a 220%), limites seguros para não perder a logo e atalhos rápidos de posição (`Topo Esq`, `Topo Dir`, `Rodapé`).
   - **Recado / CTA Personalizado no Rodapé:** Mensagem de até 2 linhas com quebra automática, tipografia Fredoka Bold, contraste inteligente por luminância (dourado `#FFE082` em temas escuros e vinho nos claros), toque direto na frase no canvas para editar, e chip `Recado` no painel com 4 frases prontas de salão, slider de escala, ajuste fino e seletor de cor.
+- **Fase B — Sprint B.1 (Entregue):**
+  - **Identidade no Cabeçalho:** Atualizado para "Belezura" com subtítulo "Seu estúdio organizado e bonito".
+  - **Hero Card com Métricas Completas:** Contadores de agendamentos, dias com "X" e dias livres no mês com ações de "Editar Agenda" e "Compartilhar PNG".
+  - **Card do Radar Sazonal na Home:** Integração direta com `SeasonalRadar`, exibindo contagem regressiva, dica comercial e atalho direto para a galeria pré-filtrada em "Em Alta / Datas".
+  - **Grade de Ações Rápidas (2x2):** Atalhos para "Agenda do Mês", "Criar Promoção" (badge "Em breve" + aviso informativo), "Molduras & Temas" e "Minha Logo".
+  - **Preservação:** Busca global de clientes, carrossel "Meus Meses" e controles de backup integralmente preservados.
 - **Suíte de Testes Automatizados:**
   - `LayoutConfigTest.kt`: Validação de defaults, retrocompatibilidade de JSONs legados e round-trip completo com campos de logo e recado.
   - `ClientSearchTest.kt`: Validação de busca insensível a acentuação e ordenação multi-mês.
