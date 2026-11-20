@@ -141,4 +141,119 @@ object ExportHelper {
             Result.failure(e)
         }
     }
+
+    fun generatePromoBitmap(
+        context: Context,
+        promoDraft: PromoDraft,
+        layoutConfig: LayoutConfig
+    ): Bitmap {
+        val bitmap = Bitmap.createBitmap(
+            PromoRenderer.VIRTUAL_WIDTH.toInt(),
+            PromoRenderer.VIRTUAL_HEIGHT.toInt(),
+            Bitmap.Config.ARGB_8888
+        )
+        val canvas = Canvas(bitmap)
+        PromoRenderer.drawPromo(
+            canvas = canvas,
+            context = context,
+            promoDraft = promoDraft,
+            layoutConfig = layoutConfig
+        )
+        return bitmap
+    }
+
+    fun savePromoToGallery(
+        context: Context,
+        promoDraft: PromoDraft,
+        layoutConfig: LayoutConfig
+    ): Result<String> {
+        return try {
+            val bitmap = generatePromoBitmap(context, promoDraft, layoutConfig)
+            val timestamp = SimpleDateFormat("yyyyMMdd_HHmmss", Locale.getDefault()).format(Date())
+            val filename = "Belezura_Promo_$timestamp.png"
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                val contentValues = ContentValues().apply {
+                    put(MediaStore.MediaColumns.DISPLAY_NAME, filename)
+                    put(MediaStore.MediaColumns.MIME_TYPE, "image/png")
+                    put(MediaStore.MediaColumns.RELATIVE_PATH, Environment.DIRECTORY_PICTURES + "/Belezura")
+                    put(MediaStore.MediaColumns.IS_PENDING, 1)
+                }
+
+                val resolver = context.contentResolver
+                val uri = resolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, contentValues)
+                    ?: return Result.failure(Exception("Falha ao criar entrada no MediaStore"))
+
+                resolver.openOutputStream(uri)?.use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                } ?: return Result.failure(Exception("Falha ao abrir stream de saída"))
+
+                contentValues.clear()
+                contentValues.put(MediaStore.MediaColumns.IS_PENDING, 0)
+                resolver.update(uri, contentValues, null, null)
+
+                Result.success("Imagem salva em Imagens/Belezura/$filename")
+            } else {
+                val picturesDir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
+                val targetDir = File(picturesDir, "Belezura")
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs()
+                }
+                val destFile = File(targetDir, filename)
+                FileOutputStream(destFile).use { out ->
+                    bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+                }
+                MediaScannerConnection.scanFile(
+                    context,
+                    arrayOf(destFile.absolutePath),
+                    arrayOf("image/png"),
+                    null
+                )
+                Result.success("Imagem salva em ${destFile.absolutePath}")
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
+
+    fun sharePromo(
+        context: Context,
+        promoDraft: PromoDraft,
+        layoutConfig: LayoutConfig
+    ): Result<Unit> {
+        return try {
+            val bitmap = generatePromoBitmap(context, promoDraft, layoutConfig)
+            val exportDir = File(context.cacheDir, "exports")
+            if (!exportDir.exists()) {
+                exportDir.mkdirs()
+            }
+            val exportFile = File(exportDir, "belezura_promo.png")
+            FileOutputStream(exportFile).use { out ->
+                bitmap.compress(Bitmap.CompressFormat.PNG, 100, out)
+            }
+
+            val contentUri: Uri = FileProvider.getUriForFile(
+                context,
+                "${context.packageName}.fileprovider",
+                exportFile
+            )
+
+            val shareIntent = Intent(Intent.ACTION_SEND).apply {
+                type = "image/png"
+                putExtra(Intent.EXTRA_STREAM, contentUri)
+                clipData = android.content.ClipData.newUri(context.contentResolver, "Promoção", contentUri)
+                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+
+            val chooser = Intent.createChooser(shareIntent, "Compartilhar Promoção")
+            chooser.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            context.startActivity(chooser)
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            e.printStackTrace()
+            Result.failure(e)
+        }
+    }
 }

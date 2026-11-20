@@ -76,6 +76,7 @@ app/src/main/
 │   ├── MainActivity.kt          # Activity raiz, viewModels, launchers SAF, navegação entre telas e hosts
 │   ├── HomeScreen.kt            # Tela inicial / Hub, card do mês ativo, busca de clientes e atalhos
 │   ├── EditorScreen.kt          # Tela principal do editor (TopAppBar, preview Canvas 9:16 com gestos multi-touch)
+│   ├── PromoEditorScreen.kt     # Editor interativo de Stories 9:16 (chips de templates, preview e edição de textos)
 │   ├── LayoutAdjustPanel.kt     # Painel "Ajustar Layout e Cores" (abas, sub-abas, sliders, cor e logo)
 │   ├── ThemeGallerySheet.kt     # Galeria de molduras/temas com radar sazonal, miniaturas reais e filtros
 │   ├── LogoSettingsDialog.kt    # Diálogo de configuração, visualização e modos da logomarca
@@ -83,10 +84,12 @@ app/src/main/
 │   ├── DayEditSheet.kt          # ModalBottomSheet de edição do dia (nomes + toggle "X" vermelho)
 │   ├── EditorDialogs.kt         # Diálogos auxiliares (MonthYearPicker, confirmação de restauração)
 │   ├── CustomBackgroundDialog.kt# Modal de orientação prévia e seleção de imagem para moldura
-│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, temas, logo e ações
+│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, temas, logo, promoções e ações
 │   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview, temas, logo e exportação)
+│   ├── PromoRenderer.kt         # Motor gráfico WYSIWYG Canvas 1080×1920 para Stories de Promoção/Avisos
 │   ├── CalendarEngine.kt        # Cálculos de calendário, deslocamentos, nomes pt-BR e grid
 │   ├── CalendarModels.kt        # Modelos imutáveis (CellData, EditableElement, AppScreen, etc.)
+│   ├── PromoModels.kt           # Modelos de Stories/Promoções (PromoTemplateType, PromoDraft, presets e JSON)
 │   ├── LayoutConfig.kt          # Configuração geométrica e visual com serialização/deserialização JSON
 │   ├── SeasonalRadar.kt         # Calendário comercial sazonal offline brasileiro (dias restantes e dicas)
 │   ├── ThemeModels.kt           # Modelos de tema, categorias, paletas de harmonização e contrato
@@ -258,7 +261,25 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
 }
 ```
 
-> **Regra Obrigatória:** Todas as leituras de JSON devem usar `optDouble`, `optInt` e `optString` com valores padrão de fallback, garantindo que o app nunca quebre ao carregar dados salvos em versões anteriores.
+### 5.4 Schema JSON de Rascunho de Promoções (`promo_draft_json`)
+Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_draft_json"`:
+```json
+{
+  "templateType": "AGENDA_ABERTA",
+  "badgeText": "ÚLTIMOS HORÁRIOS",
+  "title": "Agenda Aberta",
+  "subtitle": "Garanta seu momento de autocuidado esta semana ✨",
+  "items": [
+    { "label": "Quinta-feira", "value": "14:00 • 16:30" },
+    { "label": "Sexta-feira", "value": "10:00 • 15:00" },
+    { "label": "Sábado", "value": "09:30 • 11:00 • 14:00" }
+  ],
+  "footerCta": "Agende seu horário pelo WhatsApp!",
+  "showLogo": true
+}
+```
+
+> **Regra Obrigatória:** Todas as leituras de JSON devem usar `optDouble`, `optInt`, `optBoolean` e `optString` com valores padrão de fallback, garantindo que o app nunca quebre ao carregar dados salvos em versões anteriores.
 
 ---
 
@@ -276,7 +297,14 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
   - **Card do Radar Sazonal na Home:** Integração direta com `SeasonalRadar`, exibindo contagem regressiva, dica comercial e atalho direto para a galeria pré-filtrada em "Em Alta / Datas".
   - **Grade de Ações Rápidas (2x2):** Atalhos para "Agenda do Mês", "Criar Promoção" (badge "Em breve" + aviso informativo), "Molduras & Temas" e "Minha Logo".
   - **Preservação:** Busca global de clientes, carrossel "Meus Meses" e controles de backup integralmente preservados.
+- **Fase B — Sprint B.2 (Entregue):**
+  - **Módulo Editor de Stories de Promoções / Avisos 9:16 (`PromoEditorScreen`):** Tela dedicada de edição e exportação com seleção rápida entre 3 templates (`Vagas`, `Preços`, `Avisos`), preview WYSIWYG 1080×1920 com toque direto para abrir edição, e barra de ações com "Salvar PNG" e "Compartilhar".
+  - **Motor Gráfico WYSIWYG 1080×1920 (`PromoRenderer`):** Cartão elegante translúcido com margens de respiro seguras (~110px horizontal, ~180px vertical) para molduras fotográficas, logotipo do estúdio integrado no topo, selo pílula superior, título refinado, divisor gradiente, corpo adaptado a cada template (cards de horários, tabela pontilhada de serviços/preços e tópicos com numeração/quebra de linha) e CTA de rodapé com contraste inteligente por luminância.
+  - **Modelos e Presets pt-BR (`PromoModels`):** Presets realistas e humanizados de salão de beleza para Vagas, Tabela de Preços e Avisos do Estúdio, serialização segura em JSON com fallback e persistência em `SharedPreferences`.
+  - **Exportação Integrada (`ExportHelper`):** Métodos de renderização offscreen 1080×1920, salvamento no MediaStore (`Belezura_Promo_*.png`) e compartilhamento via `FileProvider`.
+  - **Micro-polimentos na Home:** Remoção do botão redundante no cabeçalho, substituição do ícone do card de Backup por escudo de segurança (`Icons.Outlined.Shield`) e ativação direta da ação "Criar Promoção" navegando para o editor.
 - **Suíte de Testes Automatizados:**
+  - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.
   - `LayoutConfigTest.kt`: Validação de defaults, retrocompatibilidade de JSONs legados e round-trip completo com campos de logo e recado.
   - `ClientSearchTest.kt`: Validação de busca insensível a acentuação e ordenação multi-mês.
   - `BackupManagerTest.kt`: Validação de exportação/importação e integridade do schema JSON.

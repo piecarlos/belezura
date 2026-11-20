@@ -25,7 +25,8 @@ enum class EditableElement {
 
 enum class AppScreen {
     HOME,
-    CALENDAR
+    CALENDAR,
+    PROMO_EDITOR
 }
 
 data class MonthSummary(

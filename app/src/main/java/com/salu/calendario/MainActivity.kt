@@ -146,8 +146,14 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
         }
     }
 
-    BackHandler(enabled = uiState.currentScreen == AppScreen.CALENDAR) {
-        if (uiState.isEditMode) {
+    BackHandler(enabled = uiState.currentScreen != AppScreen.HOME || showThemeGallerySheet || showLogoSettingsDialog) {
+        if (showThemeGallerySheet) {
+            showThemeGallerySheet = false
+        } else if (showLogoSettingsDialog) {
+            showLogoSettingsDialog = false
+        } else if (uiState.currentScreen == AppScreen.PROMO_EDITOR) {
+            viewModel.navigateTo(AppScreen.HOME)
+        } else if (uiState.isEditMode) {
             viewModel.toggleEditMode()
         } else {
             viewModel.navigateTo(AppScreen.HOME)
@@ -174,8 +180,24 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     },
                     onOpenLogoSettings = { showLogoSettingsDialog = true },
                     onOpenPromotions = {
-                        viewModel.showSnackbar("O criador de Stories de Promoção e Avisos chega na próxima atualização ✨")
+                        viewModel.navigateTo(AppScreen.PROMO_EDITOR)
                     }
+                )
+            }
+            AppScreen.PROMO_EDITOR -> {
+                PromoEditorScreen(
+                    uiState = uiState,
+                    onNavigateHome = { viewModel.navigateTo(AppScreen.HOME) },
+                    onSelectTemplate = { type -> viewModel.setPromoTemplate(type) },
+                    onUpdateDraft = { draft -> viewModel.updatePromoDraft(draft) },
+                    onResetToPreset = { type -> viewModel.resetPromoToPreset(type) },
+                    onOpenThemeGallery = {
+                        themeGalleryInitialCategory = ThemeCategory.ALL
+                        showThemeGallerySheet = true
+                    },
+                    onOpenLogoSettings = { showLogoSettingsDialog = true },
+                    onSaveToGallery = { ctx -> viewModel.savePromoToGallery(ctx) },
+                    onShare = { ctx -> viewModel.sharePromo(ctx) }
                 )
             }
             AppScreen.CALENDAR -> {

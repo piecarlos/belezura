@@ -36,7 +36,8 @@ data class CalendarUiState(
     val savedMonthsSummaries: List<MonthSummary> = emptyList(),
     val searchQuery: String = "",
     val searchResults: List<ClientSearchResult> = emptyList(),
-    val lastBackupTimeFormatted: String? = null
+    val lastBackupTimeFormatted: String? = null,
+    val promoDraft: PromoDraft = PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
 )
 
 object ClientSearchHelper {
@@ -109,6 +110,12 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         val hasCustom = BackgroundManager.hasCustomBackground(getApplication())
         val hasLogo = LogoManager.hasCustomLogo(getApplication())
         val lastBackup = BackupManager.getLastBackupTimeFormatted(getApplication())
+        val savedPromoJson = prefs.getString("promo_draft_json", null)
+        val initialPromo = if (savedPromoJson != null) {
+            PromoDraft.fromJson(savedPromoJson)
+        } else {
+            PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
+        }
 
         _uiState.update {
             it.copy(
@@ -117,7 +124,8 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 cells = cells,
                 hasCustomBackground = hasCustom,
                 hasCustomLogo = hasLogo,
-                lastBackupTimeFormatted = lastBackup
+                lastBackupTimeFormatted = lastBackup,
+                promoDraft = initialPromo
             )
         }
         refreshSavedMonthsSummaries()
@@ -835,6 +843,68 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                     context = context,
                     yearMonth = yearMonth,
                     cells = cells,
+                    layoutConfig = _uiState.value.layoutConfig
+                )
+            }
+            _uiState.update { it.copy(isSharing = false) }
+            res.onFailure { err ->
+                showSnackbar("Erro ao compartilhar: ${err.message}")
+            }
+        }
+    }
+
+    // Promo / Stories Marketing Module
+    fun updatePromoDraft(newDraft: PromoDraft) {
+        _uiState.update { it.copy(promoDraft = newDraft) }
+        prefs.edit().putString("promo_draft_json", newDraft.toJson()).apply()
+    }
+
+    fun setPromoTemplate(type: PromoTemplateType, resetToPreset: Boolean = false) {
+        val current = _uiState.value.promoDraft
+        val updated = if (resetToPreset || current.templateType != type || current.items.isEmpty()) {
+            PromoDraft.getPreset(type)
+        } else {
+            current.copy(templateType = type)
+        }
+        updatePromoDraft(updated)
+    }
+
+    fun resetPromoToPreset(type: PromoTemplateType) {
+        val preset = PromoDraft.getPreset(type)
+        updatePromoDraft(preset)
+        showSnackbar("Modelo '${type.displayName}' restaurado para o padrão!")
+    }
+
+    fun savePromoToGallery(context: Context) {
+        if (_uiState.value.isSavingGallery || _uiState.value.isSharing) return
+        _uiState.update { it.copy(isSavingGallery = true) }
+
+        viewModelScope.launch {
+            val res = withContext(Dispatchers.Default) {
+                ExportHelper.savePromoToGallery(
+                    context = context,
+                    promoDraft = _uiState.value.promoDraft,
+                    layoutConfig = _uiState.value.layoutConfig
+                )
+            }
+            _uiState.update { it.copy(isSavingGallery = false) }
+            res.onSuccess { msg ->
+                showSnackbar(msg)
+            }.onFailure { err ->
+                showSnackbar("Erro ao salvar imagem: ${err.message}")
+            }
+        }
+    }
+
+    fun sharePromo(context: Context) {
+        if (_uiState.value.isSavingGallery || _uiState.value.isSharing) return
+        _uiState.update { it.copy(isSharing = true) }
+
+        viewModelScope.launch {
+            val res = withContext(Dispatchers.Default) {
+                ExportHelper.sharePromo(
+                    context = context,
+                    promoDraft = _uiState.value.promoDraft,
                     layoutConfig = _uiState.value.layoutConfig
                 )
             }

@@ -43,6 +43,7 @@ import androidx.compose.material.icons.filled.CloudUpload
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.Storage
+import androidx.compose.material.icons.outlined.Shield
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -141,8 +142,7 @@ fun HomeScreen(
             // 1. Header Block (Belezura Hub)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Column {
                     Text(
@@ -155,21 +155,6 @@ fun HomeScreen(
                         text = "Seu estúdio organizado e bonito",
                         fontSize = 13.sp,
                         color = Color(0xFF8C5A60)
-                    )
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .background(Color(0xFFFCEBF1), CircleShape)
-                        .border(1.5.dp, Color(0xFFE89BAE), CircleShape),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.CalendarMonth,
-                        contentDescription = "Logo",
-                        tint = Color(0xFFB82B62),
-                        modifier = Modifier.size(24.dp)
                     )
                 }
             }
@@ -463,13 +448,12 @@ fun HomeScreen(
                         onClick = { onOpenEditorForMonth(activeYm) }
                     )
 
-                    // Item 2: Criar Promoção (Em breve)
+                    // Item 2: Criar Promoção
                     QuickActionCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Campaign,
                         title = "Criar Promoção",
                         subtitle = "Stories e avisos",
-                        badgeText = "Em breve",
                         onClick = onOpenPromotions
                     )
                 }
@@ -716,7 +700,7 @@ fun HomeScreen(
                                 .background(Color(0xFFFCEBF1), CircleShape),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Default.Storage, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(16.dp))
+                            Icon(Icons.Outlined.Shield, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(16.dp))
                         }
                         Column {
                             Text("Segurança e Backup (.json)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
