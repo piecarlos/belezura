@@ -443,11 +443,19 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 )
             }
             EditableElement.LOGO -> {
-                val newOffX = (cfg.logoOffsetX + deltaX).coerceIn(-500f, 500f)
-                val newOffY = (cfg.logoOffsetY + deltaY).coerceIn(-500f, 250f)
+                val newOffX = (cfg.logoOffsetX + deltaX).coerceIn(-480f, 480f)
+                val newOffY = (cfg.logoOffsetY + deltaY).coerceIn(-1700f, 120f)
                 cfg.copy(
                     logoOffsetX = newOffX,
                     logoOffsetY = newOffY
+                )
+            }
+            EditableElement.FOOTER_MESSAGE -> {
+                val newOffX = (cfg.footerOffsetX + deltaX).coerceIn(-480f, 480f)
+                val newOffY = (cfg.footerOffsetY + deltaY).coerceIn(-1700f, 150f)
+                cfg.copy(
+                    footerOffsetX = newOffX,
+                    footerOffsetY = newOffY
                 )
             }
             EditableElement.NONE -> cfg
@@ -464,6 +472,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             EditableElement.YEAR -> cfg.copy(yearScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.GRID_CARD -> cfg.copy(cardScale = scale.coerceIn(0.7f, 1.25f))
             EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.50f, 2.20f))
+            EditableElement.FOOTER_MESSAGE -> cfg.copy(footerScale = scale.coerceIn(0.60f, 1.80f))
             EditableElement.NONE -> cfg
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -555,8 +564,14 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             }
             EditableElement.LOGO -> {
                 cfg.copy(
-                    logoOffsetX = (cfg.logoOffsetX + deltaX).coerceIn(-500f, 500f),
-                    logoOffsetY = (cfg.logoOffsetY + deltaY).coerceIn(-500f, 250f)
+                    logoOffsetX = (cfg.logoOffsetX + deltaX).coerceIn(-480f, 480f),
+                    logoOffsetY = (cfg.logoOffsetY + deltaY).coerceIn(-1700f, 120f)
+                )
+            }
+            EditableElement.FOOTER_MESSAGE -> {
+                cfg.copy(
+                    footerOffsetX = (cfg.footerOffsetX + deltaX).coerceIn(-480f, 480f),
+                    footerOffsetY = (cfg.footerOffsetY + deltaY).coerceIn(-1700f, 150f)
                 )
             }
             EditableElement.NONE -> cfg
@@ -579,6 +594,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             }
             EditableElement.LOGO -> {
                 cfg.copy(logoOffsetX = 0f) to "Logomarca centralizada!"
+            }
+            EditableElement.FOOTER_MESSAGE -> {
+                cfg.copy(footerOffsetX = 0f) to "Recado centralizado!"
             }
             EditableElement.NONE -> cfg to ""
         }
@@ -692,6 +710,43 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         }
         saveLayoutConfig(updated)
         showSnackbar("Logomarca removida.")
+    }
+
+    fun setLogoPosition(offsetX: Float, offsetY: Float) {
+        val updated = _uiState.value.layoutConfig.copy(
+            logoOffsetX = offsetX.coerceIn(-480f, 480f),
+            logoOffsetY = offsetY.coerceIn(-1700f, 120f)
+        )
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    // Footer Message (CTA / Recado)
+    fun updateFooterMessage(message: String) {
+        val updated = _uiState.value.layoutConfig.copy(
+            footerMessage = message,
+            showFooterMessage = if (message.isNotBlank()) true else _uiState.value.layoutConfig.showFooterMessage
+        )
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun toggleFooterMessage(show: Boolean) {
+        val updated = _uiState.value.layoutConfig.copy(showFooterMessage = show)
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun updateFooterColor(color: Int) {
+        val updated = _uiState.value.layoutConfig.copy(footerColor = color)
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
+    }
+
+    fun updateFooterScale(scale: Float) {
+        val updated = _uiState.value.layoutConfig.copy(footerScale = scale.coerceIn(0.60f, 1.80f))
+        _uiState.update { it.copy(layoutConfig = updated) }
+        saveLayoutConfig(updated)
     }
 
     fun resetLayout() {

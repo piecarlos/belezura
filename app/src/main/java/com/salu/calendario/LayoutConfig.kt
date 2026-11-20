@@ -38,7 +38,15 @@ data class LayoutConfig(
     val logoMode: String = "ORIGINAL",
     val logoScale: Float = 1.0f,
     val logoOffsetX: Float = 0f,
-    val logoOffsetY: Float = 0f
+    val logoOffsetY: Float = 0f,
+
+    // Footer Message (CTA / Recado) (Phase B)
+    val footerMessage: String = "",
+    val showFooterMessage: Boolean = false,
+    val footerScale: Float = 1.0f,
+    val footerOffsetX: Float = 0f,
+    val footerOffsetY: Float = 0f,
+    val footerColor: Int = 0 // 0 = automatic contrast fallback
 ) {
     fun toJson(): String {
         val json = JSONObject()
@@ -73,6 +81,13 @@ data class LayoutConfig(
         json.put("logoScale", logoScale.toDouble())
         json.put("logoOffsetX", logoOffsetX.toDouble())
         json.put("logoOffsetY", logoOffsetY.toDouble())
+
+        json.put("footerMessage", footerMessage)
+        json.put("showFooterMessage", showFooterMessage)
+        json.put("footerScale", footerScale.toDouble())
+        json.put("footerOffsetX", footerOffsetX.toDouble())
+        json.put("footerOffsetY", footerOffsetY.toDouble())
+        json.put("footerColor", String.format("#%08X", footerColor))
         return json.toString()
     }
 
@@ -155,7 +170,14 @@ data class LayoutConfig(
                     logoMode = json.optString("logoMode", "ORIGINAL"),
                     logoScale = json.optDouble("logoScale", 1.0).toFloat(),
                     logoOffsetX = json.optDouble("logoOffsetX", 0.0).toFloat(),
-                    logoOffsetY = json.optDouble("logoOffsetY", 0.0).toFloat()
+                    logoOffsetY = json.optDouble("logoOffsetY", 0.0).toFloat(),
+
+                    footerMessage = json.optString("footerMessage", ""),
+                    showFooterMessage = json.optBoolean("showFooterMessage", false),
+                    footerScale = json.optDouble("footerScale", 1.0).toFloat(),
+                    footerOffsetX = json.optDouble("footerOffsetX", 0.0).toFloat(),
+                    footerOffsetY = json.optDouble("footerOffsetY", 0.0).toFloat(),
+                    footerColor = parseColorSafe(json.optString("footerColor"), 0)
                 )
             } catch (e: Exception) {
                 DEFAULT

@@ -64,7 +64,8 @@ enum class LayoutToolTab {
     POSITION,
     FONT,
     COLOR,
-    STYLE
+    STYLE,
+    TEXT
 }
 
 val PRESET_COLORS = listOf(
@@ -99,7 +100,11 @@ fun LayoutAdjustmentPanel(
     onUploadLogo: () -> Unit = {},
     onToggleLogoEnabled: (Boolean) -> Unit = {},
     onLogoModeChange: (String) -> Unit = {},
-    onClearLogo: () -> Unit = {}
+    onClearLogo: () -> Unit = {},
+    onSetLogoPosition: (Float, Float) -> Unit = { _, _ -> },
+    onFooterMessageChange: (String) -> Unit = {},
+    onToggleFooterMessage: (Boolean) -> Unit = {},
+    onFooterColorChange: (Int) -> Unit = {}
 ) {
     var activeTab by rememberSaveable { mutableStateOf(LayoutToolTab.POSITION) }
 
@@ -111,13 +116,16 @@ fun LayoutAdjustmentPanel(
 
     // Auto-fallback based on selected element
     val effectiveTab = when {
-        currentElement == EditableElement.LOGO && (activeTab == LayoutToolTab.FONT || activeTab == LayoutToolTab.COLOR) -> {
+        currentElement == EditableElement.LOGO && activeTab != LayoutToolTab.POSITION && activeTab != LayoutToolTab.STYLE -> {
             LayoutToolTab.STYLE
         }
-        currentElement == EditableElement.GRID_CARD && activeTab == LayoutToolTab.FONT -> {
+        currentElement == EditableElement.FOOTER_MESSAGE && activeTab != LayoutToolTab.POSITION && activeTab != LayoutToolTab.COLOR && activeTab != LayoutToolTab.TEXT -> {
+            LayoutToolTab.TEXT
+        }
+        currentElement == EditableElement.GRID_CARD && (activeTab == LayoutToolTab.FONT || activeTab == LayoutToolTab.STYLE || activeTab == LayoutToolTab.TEXT) -> {
             LayoutToolTab.POSITION
         }
-        currentElement != EditableElement.LOGO && activeTab == LayoutToolTab.STYLE -> {
+        (currentElement == EditableElement.MONTH || currentElement == EditableElement.YEAR) && (activeTab == LayoutToolTab.STYLE || activeTab == LayoutToolTab.TEXT) -> {
             LayoutToolTab.POSITION
         }
         else -> activeTab
@@ -128,6 +136,10 @@ fun LayoutAdjustmentPanel(
         EditableElement.YEAR -> uiState.layoutConfig.yearColor
         EditableElement.GRID_CARD -> uiState.layoutConfig.cardAccentColor
         EditableElement.LOGO -> uiState.layoutConfig.cardAccentColor
+        EditableElement.FOOTER_MESSAGE -> {
+            if (uiState.layoutConfig.footerColor != 0) uiState.layoutConfig.footerColor
+            else CalendarRenderer.getAutoFooterColor(uiState.layoutConfig.selectedThemeId)
+        }
         EditableElement.NONE -> uiState.layoutConfig.monthColor
     }
 
@@ -144,7 +156,7 @@ fun LayoutAdjustmentPanel(
                 .navigationBarsPadding()
                 .padding(horizontal = 14.dp, vertical = 10.dp)
         ) {
-            // Row 1: Element Selector Chips (Mês, Ano, Calendário) + Action Icons (Resetar, Concluir)
+            // Row 1: Element Selector Chips (Mês, Ano, Calendário, Logo, Recado) + Action Icons (Resetar, Concluir)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically,
@@ -200,6 +212,17 @@ fun LayoutAdjustmentPanel(
                         ),
                         border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentElement == EditableElement.LOGO)
                     )
+
+                    FilterChip(
+                        selected = currentElement == EditableElement.FOOTER_MESSAGE,
+                        onClick = { onSelectElement(EditableElement.FOOTER_MESSAGE) },
+                        label = { Text("Recado", fontWeight = FontWeight.Bold, fontSize = 12.sp) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = Color(0xFFB82B62),
+                            selectedLabelColor = Color.White
+                        ),
+                        border = FilterChipDefaults.filterChipBorder(enabled = true, selected = currentElement == EditableElement.FOOTER_MESSAGE)
+                    )
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
@@ -248,7 +271,7 @@ fun LayoutAdjustmentPanel(
                                 color = Color(0xFF5E2326)
                             )
                             Text(
-                                "Aparece com destaque no rodapé",
+                                "Aparece com destaque no calendário",
                                 fontSize = 11.sp,
                                 color = Color.Gray
                             )
@@ -264,7 +287,7 @@ fun LayoutAdjustmentPanel(
                     }
                 }
             } else {
-                // Row 2: Tool Sub-Tabs (Posição | Fonte/Estilo | Cor)
+                // Row 2: Tool Sub-Tabs
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -273,6 +296,27 @@ fun LayoutAdjustmentPanel(
                         .padding(3.dp),
                     horizontalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
+                    if (currentElement == EditableElement.FOOTER_MESSAGE) {
+                        // Tab Recado for Footer Message
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (effectiveTab == LayoutToolTab.TEXT) Color(0xFFB82B62) else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(30.dp)
+                                .clickable { activeTab = LayoutToolTab.TEXT }
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Text(
+                                    text = "Recado",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (effectiveTab == LayoutToolTab.TEXT) Color.White else Color(0xFF5E2326)
+                                )
+                            }
+                        }
+                    }
+
                     // Tab Posição
                     Surface(
                         shape = RoundedCornerShape(6.dp),
@@ -308,6 +352,40 @@ fun LayoutAdjustmentPanel(
                                     fontSize = 12.sp,
                                     fontWeight = FontWeight.Bold,
                                     color = if (effectiveTab == LayoutToolTab.STYLE) Color.White else Color(0xFF5E2326)
+                                )
+                            }
+                        }
+                    } else if (currentElement == EditableElement.FOOTER_MESSAGE) {
+                        // Tab Cor for Footer Message
+                        Surface(
+                            shape = RoundedCornerShape(6.dp),
+                            color = if (effectiveTab == LayoutToolTab.COLOR) Color(0xFFB82B62) else Color.Transparent,
+                            modifier = Modifier
+                                .weight(1f)
+                                .height(30.dp)
+                                .clickable { activeTab = LayoutToolTab.COLOR }
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.Center
+                            ) {
+                                Text(
+                                    text = "Cor",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFF5E2326)
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Box(
+                                    modifier = Modifier
+                                        .size(13.dp)
+                                        .clip(CircleShape)
+                                        .background(Color(currentElementColor))
+                                        .border(
+                                            width = 1.dp,
+                                            color = if (effectiveTab == LayoutToolTab.COLOR) Color.White else Color(0xFFB82B62),
+                                            shape = CircleShape
+                                        )
                                 )
                             }
                         }
@@ -380,12 +458,14 @@ fun LayoutAdjustmentPanel(
                             EditableElement.YEAR -> uiState.layoutConfig.yearScale
                             EditableElement.GRID_CARD -> uiState.layoutConfig.cardScale
                             EditableElement.LOGO -> uiState.layoutConfig.logoScale
+                            EditableElement.FOOTER_MESSAGE -> uiState.layoutConfig.footerScale
                             EditableElement.NONE -> 1f
                         }
 
                         val scaleRange = when (currentElement) {
                             EditableElement.GRID_CARD -> 0.70f..1.25f
                             EditableElement.LOGO -> 0.50f..2.20f
+                            EditableElement.FOOTER_MESSAGE -> 0.60f..1.80f
                             else -> 0.60f..1.60f
                         }
 
@@ -485,6 +565,50 @@ fun LayoutAdjustmentPanel(
                                 Text("Centralizar X", fontSize = 11.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB82B62))
                             }
                         }
+
+                        // Logo Quick Position Shortcuts (Topo Esq, Topo Dir, Rodapé)
+                        if (currentElement == EditableElement.LOGO) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(top = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Text("Atalhos:", fontSize = 11.sp, fontWeight = FontWeight.Medium, color = Color.Gray)
+                                val isTopoEsq = uiState.layoutConfig.logoOffsetX in -420f..-300f && uiState.layoutConfig.logoOffsetY in -1650f..-1530f
+                                val isTopoDir = uiState.layoutConfig.logoOffsetX in 300f..420f && uiState.layoutConfig.logoOffsetY in -1650f..-1530f
+                                val isRodape = kotlin.math.abs(uiState.layoutConfig.logoOffsetX) < 60f && kotlin.math.abs(uiState.layoutConfig.logoOffsetY) < 60f
+
+                                FilterChip(
+                                    selected = isTopoEsq,
+                                    onClick = { onSetLogoPosition(-360f, -1590f) },
+                                    label = { Text("Topo Esq", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFFB82B62),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                                FilterChip(
+                                    selected = isTopoDir,
+                                    onClick = { onSetLogoPosition(360f, -1590f) },
+                                    label = { Text("Topo Dir", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFFB82B62),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                                FilterChip(
+                                    selected = isRodape,
+                                    onClick = { onSetLogoPosition(0f, 0f) },
+                                    label = { Text("Rodapé", fontSize = 11.sp) },
+                                    colors = FilterChipDefaults.filterChipColors(
+                                        selectedContainerColor = Color(0xFFB82B62),
+                                        selectedLabelColor = Color.White
+                                    )
+                                )
+                            }
+                        }
                     }
 
                     LayoutToolTab.FONT -> {
@@ -504,9 +628,9 @@ fun LayoutAdjustmentPanel(
                                     selected = currentFont == option,
                                     onClick = {
                                         if (currentElement == EditableElement.MONTH) {
-                                            onMonthFontChange(option)
+                                             onMonthFontChange(option)
                                         } else {
-                                            onYearFontChange(option)
+                                             onYearFontChange(option)
                                         }
                                     },
                                     label = { Text(option.displayName, fontSize = 11.sp) },
@@ -521,11 +645,34 @@ fun LayoutAdjustmentPanel(
                     }
 
                     LayoutToolTab.COLOR -> {
-                        Box(
+                        Column(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(vertical = 4.dp)
+                                .padding(vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
                         ) {
+                            if (currentElement == EditableElement.FOOTER_MESSAGE) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(
+                                        text = if (uiState.layoutConfig.footerColor == 0) "Cor: Automática (tema)" else "Cor: Personalizada",
+                                        fontSize = 12.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = Color(0xFF5E2326)
+                                    )
+                                    if (uiState.layoutConfig.footerColor != 0) {
+                                        TextButton(
+                                            onClick = { onFooterColorChange(0) },
+                                            contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                        ) {
+                                            Text("Resetar p/ automática", fontSize = 11.sp, color = Color(0xFFB82B62))
+                                        }
+                                    }
+                                }
+                            }
                             ColorRowSelector(
                                 selectedColor = currentElementColor,
                                 onColorSelected = { newColor ->
@@ -534,6 +681,7 @@ fun LayoutAdjustmentPanel(
                                         EditableElement.YEAR -> onYearColorChange(newColor)
                                         EditableElement.GRID_CARD -> onCardAccentColorChange(newColor)
                                         EditableElement.LOGO -> {}
+                                        EditableElement.FOOTER_MESSAGE -> onFooterColorChange(newColor)
                                         EditableElement.NONE -> {}
                                     }
                                 }
@@ -555,7 +703,7 @@ fun LayoutAdjustmentPanel(
                             ) {
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     Text(
-                                        text = if (uiState.layoutConfig.logoEnabled) "Exibindo no rodapé" else "Oculto no rodapé",
+                                        text = if (uiState.layoutConfig.logoEnabled) "Exibindo no calendário" else "Oculto no calendário",
                                         fontSize = 12.sp,
                                         fontWeight = FontWeight.SemiBold,
                                         color = Color(0xFF5E2326)
@@ -605,6 +753,74 @@ fun LayoutAdjustmentPanel(
                                         selected = uiState.layoutConfig.logoMode == modeKey,
                                         onClick = { onLogoModeChange(modeKey) },
                                         label = { Text(modeTitle, fontSize = 11.sp) },
+                                        colors = FilterChipDefaults.filterChipColors(
+                                            selectedContainerColor = Color(0xFFB82B62),
+                                            selectedLabelColor = Color.White
+                                        )
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    LayoutToolTab.TEXT -> {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Row(
+                                modifier = Modifier.fillMaxWidth(),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Text(
+                                    text = if (uiState.layoutConfig.showFooterMessage) "Exibindo recado no rodapé" else "Oculto no rodapé",
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = Color(0xFF5E2326)
+                                )
+                                androidx.compose.material3.Switch(
+                                    checked = uiState.layoutConfig.showFooterMessage,
+                                    onCheckedChange = onToggleFooterMessage,
+                                    modifier = Modifier.height(24.dp)
+                                )
+                            }
+
+                            OutlinedTextField(
+                                value = uiState.layoutConfig.footerMessage,
+                                onValueChange = { if (it.length <= 100) onFooterMessageChange(it) },
+                                placeholder = { Text("Ex: Agende seu horário, últimas vagas!", fontSize = 12.sp) },
+                                maxLines = 2,
+                                textStyle = androidx.compose.ui.text.TextStyle(fontSize = 12.sp),
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(8.dp)
+                            )
+
+                            // Quick ready phrases for 1-tap insertion
+                            val phrases = listOf(
+                                "Agende seu horário, estamos quase sem vagas!",
+                                "Agenda aberta! Garanta seu horário ✨",
+                                "Últimas vagas do mês!",
+                                "Reserve seu horário com antecedência 💕"
+                            )
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .horizontalScroll(rememberScrollState()),
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                phrases.forEach { phrase ->
+                                    FilterChip(
+                                        selected = uiState.layoutConfig.footerMessage == phrase,
+                                        onClick = {
+                                            onFooterMessageChange(phrase)
+                                            if (!uiState.layoutConfig.showFooterMessage) {
+                                                onToggleFooterMessage(true)
+                                            }
+                                        },
+                                        label = { Text(phrase, fontSize = 11.sp, maxLines = 1) },
                                         colors = FilterChipDefaults.filterChipColors(
                                             selectedContainerColor = Color(0xFFB82B62),
                                             selectedLabelColor = Color.White

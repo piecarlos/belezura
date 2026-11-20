@@ -112,7 +112,11 @@ fun EditorScreen(
     onUploadLogo: () -> Unit = {},
     onToggleLogoEnabled: (Boolean) -> Unit = {},
     onLogoModeChange: (String) -> Unit = {},
-    onClearLogo: () -> Unit = {}
+    onClearLogo: () -> Unit = {},
+    onSetLogoPosition: (Float, Float) -> Unit = { _, _ -> },
+    onFooterMessageChange: (String) -> Unit = {},
+    onToggleFooterMessage: (Boolean) -> Unit = {},
+    onFooterColorChange: (Int) -> Unit = {}
 ) {
     val context = LocalContext.current
     var showOptionsMenu by rememberSaveable { mutableStateOf(false) }
@@ -400,7 +404,11 @@ fun EditorScreen(
                     onUploadLogo = onUploadLogo,
                     onToggleLogoEnabled = onToggleLogoEnabled,
                     onLogoModeChange = onLogoModeChange,
-                    onClearLogo = onClearLogo
+                    onClearLogo = onClearLogo,
+                    onSetLogoPosition = onSetLogoPosition,
+                    onFooterMessageChange = onFooterMessageChange,
+                    onToggleFooterMessage = onToggleFooterMessage,
+                    onFooterColorChange = onFooterColorChange
                 )
             }
         }
@@ -480,6 +488,15 @@ fun CalendarCanvasView(
                                         if (panChange != Offset.Zero) {
                                             onDrag(EditableElement.LOGO, panChange.x * scaleFactor, panChange.y * scaleFactor)
                                         }
+                                    } else if (targetElement == EditableElement.FOOTER_MESSAGE) {
+                                        if (zoomChange != 1f) {
+                                            val currentScale = uiState.layoutConfig.footerScale
+                                            val newScale = (currentScale * zoomChange).coerceIn(0.60f, 1.80f)
+                                            onScaleChange(newScale)
+                                        }
+                                        if (panChange != Offset.Zero) {
+                                            onDrag(EditableElement.FOOTER_MESSAGE, panChange.x * scaleFactor, panChange.y * scaleFactor)
+                                        }
                                     } else if (targetElement != EditableElement.NONE) {
                                         if (panChange != Offset.Zero) {
                                             onDrag(targetElement, panChange.x * scaleFactor, panChange.y * scaleFactor)
@@ -496,6 +513,8 @@ fun CalendarCanvasView(
                             val hit = CalendarRenderer.getHitElement(vx, vy, uiState.layoutConfig)
                             if (hit == EditableElement.LOGO && uiState.layoutConfig.logoEnabled) {
                                 onOpenEditModeWithElement(EditableElement.LOGO)
+                            } else if (hit == EditableElement.FOOTER_MESSAGE && uiState.layoutConfig.showFooterMessage) {
+                                onOpenEditModeWithElement(EditableElement.FOOTER_MESSAGE)
                             } else {
                                 val slot = CalendarRenderer.getCellAt(vx, vy, uiState.layoutConfig, rowCount)
                                 if (slot != null) {

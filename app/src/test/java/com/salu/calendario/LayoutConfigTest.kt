@@ -17,6 +17,12 @@ class LayoutConfigTest {
         assertEquals(1.0f, config.logoScale, 0.001f)
         assertEquals(0f, config.logoOffsetX, 0.001f)
         assertEquals(0f, config.logoOffsetY, 0.001f)
+        assertEquals("", config.footerMessage)
+        assertFalse(config.showFooterMessage)
+        assertEquals(1.0f, config.footerScale, 0.001f)
+        assertEquals(0f, config.footerOffsetX, 0.001f)
+        assertEquals(0f, config.footerOffsetY, 0.001f)
+        assertEquals(0, config.footerColor)
     }
 
     @Test
@@ -81,6 +87,36 @@ class LayoutConfigTest {
         assertEquals(1.3f, parsed.logoScale, 0.001f)
         assertEquals(25f, parsed.logoOffsetX, 0.001f)
         assertEquals(-15f, parsed.logoOffsetY, 0.001f)
+    }
+
+    @Test
+    fun testRoundTripWithFooterMessageAndLogoPosition() {
+        val original = LayoutConfig(
+            selectedThemeId = "luxury_gold",
+            logoEnabled = true,
+            logoMode = "ORIGINAL",
+            logoScale = 1.15f,
+            logoOffsetX = 360f,
+            logoOffsetY = -1590f,
+            footerMessage = "Agende seu horário, estamos quase sem vagas!",
+            showFooterMessage = true,
+            footerScale = 1.2f,
+            footerOffsetX = 10f,
+            footerOffsetY = -5f,
+            footerColor = 0xFF5E2326.toInt()
+        )
+
+        val json = original.toJson()
+        val parsed = LayoutConfig.fromJson(json)
+
+        assertEquals(360f, parsed.logoOffsetX, 0.001f)
+        assertEquals(-1590f, parsed.logoOffsetY, 0.001f)
+        assertEquals("Agende seu horário, estamos quase sem vagas!", parsed.footerMessage)
+        assertTrue(parsed.showFooterMessage)
+        assertEquals(1.2f, parsed.footerScale, 0.001f)
+        assertEquals(10f, parsed.footerOffsetX, 0.001f)
+        assertEquals(-5f, parsed.footerOffsetY, 0.001f)
+        assertEquals(0xFF5E2326.toInt(), parsed.footerColor)
     }
 
     @Test

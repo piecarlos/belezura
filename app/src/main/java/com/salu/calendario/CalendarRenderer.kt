@@ -14,6 +14,7 @@ import android.graphics.Rect
 import android.graphics.RectF
 import android.graphics.Shader
 import android.graphics.Typeface
+import androidx.core.graphics.ColorUtils
 import java.time.YearMonth
 import kotlin.math.max
 import kotlin.math.min
@@ -109,7 +110,12 @@ object CalendarRenderer {
             drawLogo(canvas, logoBitmap, layoutConfig)
         }
 
-        // 6. Draw Edit Mode outlines if enabled
+        // 6. Draw Footer Message (if enabled and not blank)
+        if (layoutConfig.showFooterMessage && layoutConfig.footerMessage.isNotBlank()) {
+            drawFooterMessage(canvas, context, layoutConfig)
+        }
+
+        // 7. Draw Edit Mode outlines if enabled
         if (isEditMode) {
             drawEditModeHighlights(
                 canvas = canvas,
@@ -122,7 +128,8 @@ object CalendarRenderer {
                 yearTextSize = yearTextSize,
                 monthTypeface = monthTypeface,
                 yearTypeface = yearTypeface,
-                logoBitmap = logoBitmap
+                logoBitmap = logoBitmap,
+                context = context
             )
         }
     }
@@ -561,6 +568,120 @@ object CalendarRenderer {
         }
     }
 
+    fun getAutoFooterColor(themeId: String): Int {
+        val theme = ThemeCatalog.getThemeById(themeId)
+        val baseHex = theme?.palette?.backgroundBaseHex ?: "#FFFFFF"
+        val baseColor = try {
+            Color.parseColor(baseHex)
+        } catch (_: Exception) {
+            Color.WHITE
+        }
+        val luminance = ColorUtils.calculateLuminance(baseColor)
+        return if (luminance < 0.35) {
+            Color.parseColor("#FFE082")
+        } else {
+            try {
+                Color.parseColor(theme?.palette?.monthColorHex ?: "#5E2326")
+            } catch (_: Exception) {
+                Color.parseColor("#5E2326")
+            }
+        }
+    }
+
+    private fun wrapText(text: String, paint: Paint, maxWidth: Float): List<String> {
+        val result = mutableListOf<String>()
+        val paragraphs = text.split("\n")
+        for (paragraph in paragraphs) {
+            if (paragraph.isEmpty()) {
+                result.add("")
+                continue
+            }
+            val words = paragraph.split(" ")
+            var currentLine = StringBuilder()
+            for (word in words) {
+                val candidate = if (currentLine.isEmpty()) word else "$currentLine $word"
+                if (paint.measureText(candidate) <= maxWidth) {
+                    currentLine = StringBuilder(candidate)
+                } else {
+                    if (currentLine.isNotEmpty()) {
+                        result.add(currentLine.toString())
+                    }
+                    currentLine = StringBuilder(word)
+                }
+            }
+            if (currentLine.isNotEmpty()) {
+                result.add(currentLine.toString())
+            }
+        }
+        return result
+    }
+
+    fun calculateFooterBounds(layoutConfig: LayoutConfig, context: Context? = null): RectF {
+        val text = layoutConfig.footerMessage.ifBlank { "Recado" }
+        val textSize = 38f * layoutConfig.footerScale
+        val localPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            this.textSize = textSize
+            if (context != null) {
+                typeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
+            } else {
+                typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            }
+        }
+
+        val maxWidth = 900f
+        val lines = wrapText(text, localPaint, maxWidth)
+        val lineHeight = textSize * 1.35f
+        val totalHeight = max(textSize, (lines.size - 1) * lineHeight + textSize)
+        val maxLineWidth = lines.maxOfOrNull { localPaint.measureText(it) } ?: 200f
+
+        val centerX = 540f + layoutConfig.footerOffsetX
+        val centerY = 1750f + layoutConfig.footerOffsetY
+        val halfW = (maxLineWidth / 2f) + 24f
+        val halfH = (totalHeight / 2f) + 16f
+        return RectF(centerX - halfW, centerY - halfH, centerX + halfW, centerY + halfH)
+    }
+
+    private fun drawFooterMessage(canvas: Canvas, context: Context, layoutConfig: LayoutConfig) {
+        if (!layoutConfig.showFooterMessage || layoutConfig.footerMessage.isBlank()) return
+
+        val color = if (layoutConfig.footerColor != 0) {
+            layoutConfig.footerColor
+        } else {
+            getAutoFooterColor(layoutConfig.selectedThemeId)
+        }
+
+        val textSize = 38f * layoutConfig.footerScale
+        textPaint.reset()
+        textPaint.isAntiAlias = true
+        textPaint.isSubpixelText = true
+        textPaint.typeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
+        textPaint.textSize = textSize
+        textPaint.color = color
+        textPaint.textAlign = Paint.Align.CENTER
+
+        // Subtle soft shadow for contrast and legibility over detailed backgrounds
+        textPaint.setShadowLayer(4f, 0f, 2f, Color.argb(45, 0, 0, 0))
+
+        val maxWidth = 900f
+        val lines = wrapText(layoutConfig.footerMessage, textPaint, maxWidth)
+        val lineHeight = textSize * 1.35f
+        val totalHeight = (lines.size - 1) * lineHeight + textSize
+
+        val centerX = 540f + layoutConfig.footerOffsetX
+        val centerY = 1750f + layoutConfig.footerOffsetY
+
+        val fontMetrics = textPaint.fontMetrics
+        val textAscent = fontMetrics.ascent
+        val textDescent = fontMetrics.descent
+        val startY = centerY - (totalHeight / 2f) - ((textAscent + textDescent) / 2f)
+
+        for ((i, line) in lines.withIndex()) {
+            val y = startY + (i * lineHeight)
+            canvas.drawText(line, centerX, y, textPaint)
+        }
+        textPaint.clearShadowLayer()
+    }
+
     private fun drawEditModeHighlights(
         canvas: Canvas,
         layoutConfig: LayoutConfig,
@@ -572,7 +693,8 @@ object CalendarRenderer {
         yearTextSize: Float,
         monthTypeface: Typeface,
         yearTypeface: Typeface,
-        logoBitmap: Bitmap? = null
+        logoBitmap: Bitmap? = null,
+        context: Context? = null
     ) {
         val activeColor = Color.parseColor("#E91E63")
         val inactiveColor = Color.parseColor("#99D81B60")
@@ -632,11 +754,26 @@ object CalendarRenderer {
             dashedPaint.strokeWidth = if (selectedElement == EditableElement.LOGO) 4.5f else 2.5f
             canvas.drawRoundRect(logoRect, 16f, 16f, dashedPaint)
         }
+
+        // 5. Footer Message bounding box (if enabled or selected)
+        if ((layoutConfig.showFooterMessage && layoutConfig.footerMessage.isNotBlank()) || selectedElement == EditableElement.FOOTER_MESSAGE) {
+            val footerBounds = calculateFooterBounds(layoutConfig, context)
+            val footerPad = 14f
+            val footerRect = RectF(
+                footerBounds.left - footerPad,
+                footerBounds.top - footerPad,
+                footerBounds.right + footerPad,
+                footerBounds.bottom + footerPad
+            )
+            dashedPaint.color = if (selectedElement == EditableElement.FOOTER_MESSAGE) activeColor else inactiveColor
+            dashedPaint.strokeWidth = if (selectedElement == EditableElement.FOOTER_MESSAGE) 4.5f else 2.5f
+            canvas.drawRoundRect(footerRect, 16f, 16f, dashedPaint)
+        }
     }
 
     // Touch hit testing helpers
     fun getHitElement(x: Float, y: Float, layoutConfig: LayoutConfig): EditableElement {
-        // 1. Check Logo zone first (if enabled in footer)
+        // 1. Check Logo zone first (if enabled)
         if (layoutConfig.logoEnabled) {
             val centerX = 540f + layoutConfig.logoOffsetX
             val centerY = 1750f + layoutConfig.logoOffsetY
@@ -647,7 +784,18 @@ object CalendarRenderer {
             }
         }
 
-        // 2. Check Month zone
+        // 2. Check Footer Message zone (if enabled and not blank)
+        if (layoutConfig.showFooterMessage && layoutConfig.footerMessage.isNotBlank()) {
+            val footerBounds = calculateFooterBounds(layoutConfig, null)
+            val pad = 24f
+            if (x in (footerBounds.left - pad)..(footerBounds.right + pad) &&
+                y in (footerBounds.top - pad)..(footerBounds.bottom + pad)
+            ) {
+                return EditableElement.FOOTER_MESSAGE
+            }
+        }
+
+        // 3. Check Month zone
         val monthPad = 50f
         if (x in (layoutConfig.monthX - 300f)..(layoutConfig.monthX + 300f) &&
             y in (layoutConfig.monthY - 100f)..(layoutConfig.monthY + monthPad)

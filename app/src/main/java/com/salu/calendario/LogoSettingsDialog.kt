@@ -169,7 +169,7 @@ fun LogoSettingsDialog(
                     ) {
                         Column {
                             Text(
-                                text = "Exibir no rodapé",
+                                text = "Exibir no calendário",
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold,
                                 color = Color(0xFF5E2326)

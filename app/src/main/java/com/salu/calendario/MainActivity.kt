@@ -211,7 +211,11 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     },
                     onToggleLogoEnabled = { viewModel.toggleLogoEnabled(it) },
                     onLogoModeChange = { viewModel.updateLogoMode(it) },
-                    onClearLogo = { viewModel.clearLogo() }
+                    onClearLogo = { viewModel.clearLogo() },
+                    onSetLogoPosition = { x, y -> viewModel.setLogoPosition(x, y) },
+                    onFooterMessageChange = { msg -> viewModel.updateFooterMessage(msg) },
+                    onToggleFooterMessage = { show -> viewModel.toggleFooterMessage(show) },
+                    onFooterColorChange = { color -> viewModel.updateFooterColor(color) }
                 )
             }
         }
