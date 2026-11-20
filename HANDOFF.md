@@ -257,6 +257,15 @@ Os dados são armazenados de forma atômica no arquivo privado `salu_calendar_pr
     "month_data_2026_12": {
       "slots": [ ... ]
     }
+  },
+  "promoDraft": {
+    "templateType": "AGENDA_ABERTA",
+    "badgeText": "ÚLTIMOS HORÁRIOS",
+    "title": "Agenda Aberta",
+    "subtitle": "Garanta seu momento de autocuidado esta semana ✨",
+    "items": [ ... ],
+    "footerCta": "Agende seu horário pelo WhatsApp!",
+    "showLogo": true
   }
 }
 ```
@@ -303,6 +312,11 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
   - **Modelos e Presets pt-BR (`PromoModels`):** Presets realistas e humanizados de salão de beleza para Vagas, Tabela de Preços e Avisos do Estúdio, serialização segura em JSON com fallback e persistência em `SharedPreferences`.
   - **Exportação Integrada (`ExportHelper`):** Métodos de renderização offscreen 1080×1920, salvamento no MediaStore (`Belezura_Promo_*.png`) e compartilhamento via `FileProvider`.
   - **Micro-polimentos na Home:** Remoção do botão redundante no cabeçalho, substituição do ícone do card de Backup por escudo de segurança (`Icons.Outlined.Shield`) e ativação direta da ação "Criar Promoção" navegando para o editor.
+- **Fase B — Sprint B.3 (Entregue):**
+  - **Campanhas Sazonais Integradas no Radar (`SeasonalRadar` & `HomeScreen`):** Todas as 10 datas comerciais contam com presets prontos de promoções (`PromoDraft`), cópias persuasivas em pt-BR e botão "Criar Story da Data" direto no card do Radar na Home, navegando para o editor com o rascunho preenchido.
+  - **Backup Universal Completo (`BackupManager`):** Exportação e importação preservam e restauram `"promoDraft"` com retrocompatibilidade total de JSON (backups legados sem esse campo continuam importando perfeitamente).
+  - **Polimentos de Tipografia e Diagramação (`PromoRenderer`):** Fontes ampliadas para Stories 9:16 (título 62f, subtítulo 29f, itens 34f-38f, CTA 38f), centralização vertical calculada pela altura natural dos blocos de itens (eliminando vácuo em Vagas e espaçamento vertical excessivo em Preços e Avisos) e contraste adaptativo rico para temas escuros (`Color.argb(240, 22, 22, 24)` com bordas e destaques dourados/vibrantes).
+  - **Usabilidade do Editor (`PromoEditorScreen`, `ThemeGallerySheet` & `MainActivity`):** Chips `Vagas`, `Preços`, `Avisos` 100% centralizados com `Surface`, campos em formato empilhado para Avisos e Vagas no bottom sheet, switch com thumb branco, proporção áurea 65%/35% para Tabela de Preços, subtítulo contextual na Galeria de Molduras ("Escolha o visual da sua arte") e Snackbar exibido acima da barra inferior.
 - **Suíte de Testes Automatizados:**
   - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.
   - `LayoutConfigTest.kt`: Validação de defaults, retrocompatibilidade de JSONs legados e round-trip completo com campos de logo e recado.

@@ -97,7 +97,8 @@ fun HomeScreen(
     onOpenQuickDatePicker: () -> Unit,
     onOpenThemeGallery: (ThemeCategory) -> Unit = {},
     onOpenLogoSettings: () -> Unit = {},
-    onOpenPromotions: () -> Unit = {}
+    onOpenPromotions: () -> Unit = {},
+    onApplySeasonalPromo: (SeasonalCampaign) -> Unit = {}
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -342,8 +343,7 @@ fun HomeScreen(
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(16.dp))
-                        .clickable { onOpenThemeGallery(ThemeCategory.SEASONAL) },
+                        .shadow(4.dp, RoundedCornerShape(16.dp)),
                     colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9FA)),
                     shape = RoundedCornerShape(16.dp),
                     border = BorderStroke(1.dp, Color(0xFFF3C7D4))
@@ -410,16 +410,36 @@ fun HomeScreen(
                         Row(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(top = 2.dp),
-                            horizontalArrangement = Arrangement.End,
+                                .padding(top = 4.dp),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = "Ver Molduras em Alta →",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = Color(0xFFB82B62)
-                            )
+                            Button(
+                                onClick = { onApplySeasonalPromo(activeCampaign) },
+                                modifier = Modifier
+                                    .weight(1.2f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62)),
+                                contentPadding = PaddingValues(horizontal = 8.dp)
+                            ) {
+                                Icon(Icons.Default.Campaign, contentDescription = null, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Criar Story da Data", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
+
+                            OutlinedButton(
+                                onClick = { onOpenThemeGallery(ThemeCategory.SEASONAL) },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(38.dp),
+                                shape = RoundedCornerShape(10.dp),
+                                border = BorderStroke(1.dp, Color(0xFFB82B62)),
+                                colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB82B62)),
+                                contentPadding = PaddingValues(horizontal = 6.dp)
+                            ) {
+                                Text("Ver Molduras →", fontSize = 12.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            }
                         }
                     }
                 }

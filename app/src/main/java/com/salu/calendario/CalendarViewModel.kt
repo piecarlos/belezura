@@ -915,12 +915,24 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun applySeasonalPromoPreset(campaign: SeasonalCampaign) {
+        val preset = campaign.promoPreset ?: SeasonalRadar.getPromoPresetForCampaign(campaign.id)
+        updatePromoDraft(preset)
+        _uiState.update { it.copy(currentScreen = AppScreen.PROMO_EDITOR) }
+    }
+
     // Reload all data after Backup Restore
     fun reloadAllData() {
         val ym = _uiState.value.currentYearMonth
         val reloadedLayout = loadLayoutConfig()
         val savedCells = loadMonthCells(ym)
         val cells = CalendarEngine.generateCells(ym, savedCells)
+        val savedPromoJson = prefs.getString("promo_draft_json", null)
+        val reloadedPromo = if (savedPromoJson != null) {
+            PromoDraft.fromJson(savedPromoJson)
+        } else {
+            PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
+        }
         undoStack.clear()
         redoStack.clear()
         _uiState.update {
@@ -929,11 +941,12 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 cells = cells,
                 editingCell = null,
                 canUndo = false,
-                canRedo = false
+                canRedo = false,
+                promoDraft = reloadedPromo
             )
         }
         refreshSavedMonthsSummaries()
-        showSnackbar("Dados e layout restaurados do backup!")
+        showSnackbar("Dados, layout e promoções restaurados do backup!")
     }
 
     fun showSnackbar(message: String) {

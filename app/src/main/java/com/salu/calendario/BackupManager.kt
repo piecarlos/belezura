@@ -9,12 +9,14 @@ object BackupManager {
 
     data class ParsedBackup(
         val layoutConfigJson: String?,
-        val monthsData: Map<String, String>
+        val monthsData: Map<String, String>,
+        val promoDraftJson: String? = null
     )
 
     fun createBackupJson(
         layoutConfigJson: String?,
-        monthsData: Map<String, String>
+        monthsData: Map<String, String>,
+        promoDraftJson: String? = null
     ): String {
         val root = JSONObject()
         root.put("schemaVersion", SCHEMA_VERSION)
@@ -24,6 +26,12 @@ object BackupManager {
             root.put("layoutConfig", JSONObject(layoutConfigJson))
         } else {
             root.put("layoutConfig", JSONObject(LayoutConfig.DEFAULT.toJson()))
+        }
+
+        if (!promoDraftJson.isNullOrBlank()) {
+            try {
+                root.put("promoDraft", JSONObject(promoDraftJson))
+            } catch (_: Exception) {}
         }
 
         val monthsObj = JSONObject()
@@ -51,6 +59,7 @@ object BackupManager {
             }
 
             val layoutConfigJson = root.optJSONObject("layoutConfig")?.toString()
+            val promoDraftJson = root.optJSONObject("promoDraft")?.toString()
             val monthsObj = root.optJSONObject("months")
                 ?: return Result.failure(IllegalArgumentException("Formato inválido: campo 'months' ausente."))
 
@@ -64,7 +73,7 @@ object BackupManager {
                 }
             }
 
-            Result.success(ParsedBackup(layoutConfigJson, monthsMap))
+            Result.success(ParsedBackup(layoutConfigJson, monthsMap, promoDraftJson))
         } catch (e: Exception) {
             Result.failure(IllegalArgumentException("Erro ao processar JSON de backup: ${e.message}", e))
         }
@@ -75,6 +84,7 @@ object BackupManager {
             val prefs = context.getSharedPreferences("salu_calendar_prefs", Context.MODE_PRIVATE)
             val allEntries = prefs.all
             val layoutJson = allEntries["layout_config"] as? String
+            val promoJson = allEntries["promo_draft_json"] as? String
             val monthsMap = mutableMapOf<String, String>()
             for ((key, value) in allEntries) {
                 if (key.startsWith("month_data_") && value is String) {
@@ -82,7 +92,7 @@ object BackupManager {
                 }
             }
 
-            val backupContent = createBackupJson(layoutJson, monthsMap)
+            val backupContent = createBackupJson(layoutJson, monthsMap, promoJson)
             context.contentResolver.openOutputStream(uri)?.use { out ->
                 out.write(backupContent.toByteArray(Charsets.UTF_8))
             } ?: return Result.failure(Exception("Não foi possível abrir o arquivo para gravação."))
@@ -106,16 +116,19 @@ object BackupManager {
                     val prefs = context.getSharedPreferences("salu_calendar_prefs", Context.MODE_PRIVATE)
                     val editor = prefs.edit()
 
-                    // Clear existing months & layout
+                    // Clear existing months, layout & promo
                     val existingKeys = prefs.all.keys
                     for (k in existingKeys) {
-                        if (k.startsWith("month_data_") || k == "layout_config") {
+                        if (k.startsWith("month_data_") || k == "layout_config" || (backup.promoDraftJson != null && k == "promo_draft_json")) {
                             editor.remove(k)
                         }
                     }
 
                     backup.layoutConfigJson?.let {
                         editor.putString("layout_config", it)
+                    }
+                    backup.promoDraftJson?.let {
+                        editor.putString("promo_draft_json", it)
                     }
                     for ((k, v) in backup.monthsData) {
                         editor.putString(k, v)

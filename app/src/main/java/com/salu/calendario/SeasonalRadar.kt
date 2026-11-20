@@ -12,10 +12,153 @@ data class SeasonalCampaign(
     val startDate: LocalDate,
     val endDate: LocalDate,
     val themeTag: String,
-    val daysRemaining: Long
+    val daysRemaining: Long,
+    val promoPreset: PromoDraft? = null
 )
 
 object SeasonalRadar {
+
+    fun getPromoPresetForCampaign(id: String): PromoDraft {
+        return when (id) {
+            "summer" -> PromoDraft(
+                templateType = PromoTemplateType.AGENDA_ABERTA,
+                badgeText = "VERÃO & FÉRIAS",
+                title = "Unhas & Pés Perfeitos",
+                subtitle = "Horários especiais para arrasar na praia ou piscina ☀️",
+                items = listOf(
+                    PromoLineItem("Quinta-feira", "10:00 • 15:00"),
+                    PromoLineItem("Sexta-feira", "09:00 • 14:00 • 17:30"),
+                    PromoLineItem("Sábado", "08:30 • 11:30")
+                ),
+                footerCta = "Garanta sua vaga antes que esgote!",
+                showLogo = true
+            )
+            "carnival" -> PromoDraft(
+                templateType = PromoTemplateType.TABELA_PRECOS,
+                badgeText = "GLITTER & FOLIA",
+                title = "Especial Carnaval",
+                subtitle = "Combos para brilhar nos blocos e festas 🎉",
+                items = listOf(
+                    PromoLineItem("Manicure com Glitter", "R$ 65,00"),
+                    PromoLineItem("Alongamento Gel Folia", "R$ 130,00"),
+                    PromoLineItem("Combo Make + Unhas", "R$ 160,00"),
+                    PromoLineItem("Design Sobrancelhas", "R$ 45,00")
+                ),
+                footerCta = "Agende seu horário e caia na folia!",
+                showLogo = true
+            )
+            "womens_day" -> PromoDraft(
+                templateType = PromoTemplateType.TABELA_PRECOS,
+                badgeText = "MÊS DA MULHER",
+                title = "Celebre Sua Beleza",
+                subtitle = "Preparamos mimos e condições especiais para você 🌸",
+                items = listOf(
+                    PromoLineItem("Mão + Pé + Spa", "R$ 85,00"),
+                    PromoLineItem("Manutenção Gel", "R$ 90,00"),
+                    PromoLineItem("Limpeza de Pele Express", "R$ 75,00"),
+                    PromoLineItem("Design + Henna", "R$ 55,00")
+                ),
+                footerCta = "Você merece esse cuidado! Agende já",
+                showLogo = true
+            )
+            "mothers_day" -> PromoDraft(
+                templateType = PromoTemplateType.TABELA_PRECOS,
+                badgeText = "ESPECIAL DIA DAS MÃES",
+                title = "Presenteie com Amor",
+                subtitle = "Combos para homenagear quem sempre cuida de você ❤️",
+                items = listOf(
+                    PromoLineItem("Combo Mãe & Filha", "R$ 140,00"),
+                    PromoLineItem("Spa dos Pés + Manicure", "R$ 80,00"),
+                    PromoLineItem("Alongamento Completo", "R$ 135,00"),
+                    PromoLineItem("Vale-Presente Beleza", "A partir de R$ 50")
+                ),
+                footerCta = "Vagas limitadas para a semana das mães!",
+                showLogo = true
+            )
+            "valentines_day" -> PromoDraft(
+                templateType = PromoTemplateType.AGENDA_ABERTA,
+                badgeText = "ESPECIAL NAMORADOS",
+                title = "Produção Romântica",
+                subtitle = "Horários para você se produzir para o date especial 🌹",
+                items = listOf(
+                    PromoLineItem("Quinta-feira", "14:00 • 17:00"),
+                    PromoLineItem("Sexta-feira", "10:00 • 13:30 • 16:30"),
+                    PromoLineItem("Sábado", "09:00 • 12:00")
+                ),
+                footerCta = "Reserve logo seu horário de date!",
+                showLogo = true
+            )
+            "sao_joao" -> PromoDraft(
+                templateType = PromoTemplateType.AGENDA_ABERTA,
+                badgeText = "CLIMA JUNINO",
+                title = "Unhas pro Arraiá",
+                subtitle = "Fique pronta para curtir as festas de São João 🔥",
+                items = listOf(
+                    PromoLineItem("Quarta-feira", "11:00 • 15:30"),
+                    PromoLineItem("Quinta-feira", "09:30 • 14:00"),
+                    PromoLineItem("Sexta-feira", "10:00 • 16:00")
+                ),
+                footerCta = "Anarriê! Garanta sua vaga pelo WhatsApp",
+                showLogo = true
+            )
+            "client_day" -> PromoDraft(
+                templateType = PromoTemplateType.TABELA_PRECOS,
+                badgeText = "SEMANA DA CLIENTE",
+                title = "Obrigada Por Estar Aqui",
+                subtitle = "Descontos exclusivos em todos os procedimentos 💖",
+                items = listOf(
+                    PromoLineItem("Manicure Tradicional", "R$ 35,00"),
+                    PromoLineItem("Banho de Gel", "R$ 70,00"),
+                    PromoLineItem("Spa dos Pés Relax", "R$ 50,00"),
+                    PromoLineItem("Lash Lifting", "R$ 80,00")
+                ),
+                footerCta = "Válido apenas esta semana! Reserve já",
+                showLogo = true
+            )
+            "pink_october" -> PromoDraft(
+                templateType = PromoTemplateType.AVISO_REGRAS,
+                badgeText = "OUTUBRO ROSA",
+                title = "Cuidado & Amor Próprio",
+                subtitle = "O autocuidado começa de dentro para fora 🎀",
+                items = listOf(
+                    PromoLineItem("Faça o autoexame", "O diagnóstico precoce salva vidas"),
+                    PromoLineItem("Seu momento de pausa", "Reserve um tempo exclusivo só para você"),
+                    PromoLineItem("Tons de rosa em alta", "Esmaltação temática especial no estúdio"),
+                    PromoLineItem("Compartilhe amor", "Incentive as mulheres da sua vida a se cuidarem")
+                ),
+                footerCta = "Juntas na prevenção e no amor próprio!",
+                showLogo = true
+            )
+            "black_friday" -> PromoDraft(
+                templateType = PromoTemplateType.TABELA_PRECOS,
+                badgeText = "BLACK WEEK DA BELEZA",
+                title = "Super Combos Black",
+                subtitle = "Os menores preços do ano em horários selecionados 🖤",
+                items = listOf(
+                    PromoLineItem("Alongamento Gel + Pé", "R$ 130,00"),
+                    PromoLineItem("Manutenção + Cutilagem", "R$ 85,00"),
+                    PromoLineItem("Spa dos Pés Completo", "R$ 55,00"),
+                    PromoLineItem("Combo Sobrancelha + Buço", "R$ 40,00")
+                ),
+                footerCta = "Últimas vagas com desconto! Agende já",
+                showLogo = true
+            )
+            "christmas_newyear" -> PromoDraft(
+                templateType = PromoTemplateType.AGENDA_ABERTA,
+                badgeText = "FESTAS DE FIM DE ANO",
+                title = "Agenda de Natal & Réveillon",
+                subtitle = "Horários concorridos para fechar o ano impecável ✨",
+                items = listOf(
+                    PromoLineItem("Semana do Natal", "21/12 a 24/12 (vagas finais)"),
+                    PromoLineItem("Semana do Réveillon", "28/12 a 31/12 (esgotando)"),
+                    PromoLineItem("Horários Extras", "Consulte encaixes no direct ou WhatsApp")
+                ),
+                footerCta = "Garanta seu visual de festas! Agende agora",
+                showLogo = true
+            )
+            else -> PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
+        }
+    }
 
     // Carnaval móvel (2026 a 2030)
     private val CARNIVAL_DATES = mapOf(
@@ -92,6 +235,7 @@ object SeasonalRadar {
         themeTag: String
     ): SeasonalCampaign? {
         val days = ChronoUnit.DAYS.between(today, target)
+        val preset = getPromoPresetForCampaign(id)
         return when {
             days == 0L -> {
                 SeasonalCampaign(
@@ -101,7 +245,8 @@ object SeasonalRadar {
                     startDate = target,
                     endDate = target,
                     themeTag = themeTag,
-                    daysRemaining = 0
+                    daysRemaining = 0,
+                    promoPreset = preset
                 )
             }
             days in 1..20 -> {
@@ -113,7 +258,8 @@ object SeasonalRadar {
                     startDate = target.minusDays(days),
                     endDate = target,
                     themeTag = themeTag,
-                    daysRemaining = days
+                    daysRemaining = days,
+                    promoPreset = preset
                 )
             }
             else -> null
@@ -129,6 +275,7 @@ object SeasonalRadar {
         endDate: LocalDate,
         themeTag: String
     ): SeasonalCampaign? {
+        val preset = getPromoPresetForCampaign(id)
         if (!today.isBefore(startDate) && !today.isAfter(endDate)) {
             return SeasonalCampaign(
                 id = id,
@@ -137,7 +284,8 @@ object SeasonalRadar {
                 startDate = startDate,
                 endDate = endDate,
                 themeTag = themeTag,
-                daysRemaining = 0
+                daysRemaining = 0,
+                promoPreset = preset
             )
         }
 
@@ -151,7 +299,8 @@ object SeasonalRadar {
                 startDate = startDate,
                 endDate = endDate,
                 themeTag = themeTag,
-                daysRemaining = daysUntilStart
+                daysRemaining = daysUntilStart,
+                promoPreset = preset
             )
         }
 

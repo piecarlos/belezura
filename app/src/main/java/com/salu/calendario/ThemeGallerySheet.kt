@@ -77,6 +77,7 @@ fun ThemeGallerySheet(
     currentThemeId: String,
     hasCustomBackground: Boolean,
     hasCustomLogo: Boolean,
+    subtitle: String = "Escolha o visual do seu calendário",
     initialCategory: ThemeCategory = ThemeCategory.ALL,
     onSelectTheme: (ThemeItem) -> Unit,
     onPickCustomBackground: () -> Unit,
@@ -120,7 +121,7 @@ fun ThemeGallerySheet(
                         color = Color(0xFF5E2326)
                     )
                     Text(
-                        text = "Escolha o visual do seu calendário",
+                        text = subtitle,
                         fontSize = 12.sp,
                         color = Color.Gray
                     )

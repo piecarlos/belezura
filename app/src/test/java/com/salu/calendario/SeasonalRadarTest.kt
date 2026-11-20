@@ -64,5 +64,32 @@ class SeasonalRadarTest {
         assertNotNull(campaign)
         assertEquals("summer", campaign?.id)
         assertEquals(0L, campaign?.daysRemaining)
+        assertNotNull(campaign?.promoPreset)
+        assertEquals("VERÃO & FÉRIAS", campaign?.promoPreset?.badgeText)
+    }
+
+    @Test
+    fun testAllCampaignIdsReturnValidPromoPreset() {
+        val campaignIds = listOf(
+            "summer",
+            "carnival",
+            "womens_day",
+            "mothers_day",
+            "valentines_day",
+            "sao_joao",
+            "client_day",
+            "pink_october",
+            "black_friday",
+            "christmas_newyear"
+        )
+        for (id in campaignIds) {
+            val preset = SeasonalRadar.getPromoPresetForCampaign(id)
+            assertNotNull("Preset for $id should not be null", preset)
+            assertTrue("Badge should not be blank for $id", preset.badgeText.isNotBlank())
+            assertTrue("Title should not be blank for $id", preset.title.isNotBlank())
+            assertTrue("Subtitle should not be blank for $id", preset.subtitle.isNotBlank())
+            assertTrue("Items should not be empty for $id", preset.items.isNotEmpty())
+            assertTrue("Footer CTA should not be blank for $id", preset.footerCta.isNotBlank())
+        }
     }
 }

@@ -76,6 +76,32 @@ class BackupManagerTest {
     }
 
     @Test
+    fun testBackupWithPromoDraftRoundTrip() {
+        val layout = LayoutConfig()
+        val promo = PromoDraft(
+            templateType = PromoTemplateType.AVISO_REGRAS,
+            badgeText = "REGRAS 2026",
+            title = "Avisos Importantes",
+            items = listOf(PromoLineItem("Regra 1", "Detalhe 1"))
+        )
+        val backupJson = BackupManager.createBackupJson(
+            layoutConfigJson = layout.toJson(),
+            monthsData = emptyMap(),
+            promoDraftJson = promo.toJson()
+        )
+        assertTrue(backupJson.contains("\"promoDraft\""))
+
+        val parsed = BackupManager.validateAndParseBackupJson(backupJson).getOrNull()
+        assertNotNull(parsed)
+        assertNotNull(parsed!!.promoDraftJson)
+        val restoredPromo = PromoDraft.fromJson(parsed.promoDraftJson!!)
+        assertEquals(PromoTemplateType.AVISO_REGRAS, restoredPromo.templateType)
+        assertEquals("REGRAS 2026", restoredPromo.badgeText)
+        assertEquals("Avisos Importantes", restoredPromo.title)
+        assertEquals(1, restoredPromo.items.size)
+    }
+
+    @Test
     fun testRejectInvalidOrCorruptedJson() {
         // Empty or null string
         assertTrue(BackupManager.validateAndParseBackupJson("").isFailure)

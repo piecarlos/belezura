@@ -244,32 +244,31 @@ fun PromoEditorScreen(
             ) {
                 PromoTemplateType.values().forEach { templateType ->
                     val isSelected = uiState.promoDraft.templateType == templateType
-                    FilterChip(
-                        selected = isSelected,
+                    Surface(
                         onClick = { onSelectTemplate(templateType) },
-                        label = {
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(36.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = if (isSelected) Color(0xFFB82B62) else Color.White,
+                        border = BorderStroke(
+                            width = if (isSelected) 1.5.dp else 1.dp,
+                            color = if (isSelected) Color(0xFFB82B62) else Color(0xFFF3C7D4)
+                        )
+                    ) {
+                        Box(
+                            modifier = Modifier.fillMaxSize(),
+                            contentAlignment = Alignment.Center
+                        ) {
                             Text(
                                 text = templateType.displayName,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 13.sp
+                                fontSize = 13.sp,
+                                color = if (isSelected) Color.White else Color(0xFF5E2326),
+                                textAlign = androidx.compose.ui.text.style.TextAlign.Center
                             )
-                        },
-                        modifier = Modifier.weight(1f),
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = Color(0xFFB82B62),
-                            selectedLabelColor = Color.White,
-                            containerColor = Color.White,
-                            labelColor = Color(0xFF5E2326)
-                        ),
-                        border = FilterChipDefaults.filterChipBorder(
-                            enabled = true,
-                            selected = isSelected,
-                            borderColor = Color(0xFFF3C7D4),
-                            selectedBorderColor = Color(0xFFB82B62),
-                            borderWidth = 1.dp,
-                            selectedBorderWidth = 1.5.dp
-                        )
-                    )
+                        }
+                    }
                 }
             }
 
@@ -484,7 +483,8 @@ private fun PromoEditBottomSheet(
                     },
                     label = { Text("Subtítulo curto") },
                     placeholder = { Text("Ex: Garanta seu horário...") },
-                    singleLine = true,
+                    singleLine = false,
+                    maxLines = 2,
                     modifier = Modifier.fillMaxWidth(),
                     shape = RoundedCornerShape(10.dp),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -521,7 +521,10 @@ private fun PromoEditBottomSheet(
                             showLogo = it
                             commitChanges()
                         },
-                        colors = SwitchDefaults.colors(checkedThumbColor = Color(0xFFB82B62))
+                        colors = SwitchDefaults.colors(
+                            checkedThumbColor = Color.White,
+                            checkedTrackColor = Color(0xFFB82B62)
+                        )
                     )
                 }
 
@@ -573,75 +576,134 @@ private fun PromoEditBottomSheet(
                             colors = CardDefaults.cardColors(containerColor = Color(0xFFFAFAFA)),
                             border = BorderStroke(1.dp, Color(0xFFEEEEEE))
                         ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(8.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                // Label Field
-                                val labelHint = when (promoDraft.templateType) {
-                                    PromoTemplateType.AGENDA_ABERTA -> "Dia (Ex: Sexta)"
-                                    PromoTemplateType.TABELA_PRECOS -> "Serviço"
-                                    PromoTemplateType.AVISO_REGRAS -> "Regra / Tópico"
-                                }
-                                OutlinedTextField(
-                                    value = item.label,
-                                    onValueChange = { newLabel ->
-                                        items = items.toMutableList().also {
-                                            it[index] = it[index].copy(label = newLabel)
-                                        }
-                                        commitChanges()
-                                    },
-                                    label = { Text(labelHint, fontSize = 11.sp) },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1.3f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color(0xFFB82B62)
-                                    )
-                                )
-
-                                // Value Field
-                                val valueHint = when (promoDraft.templateType) {
-                                    PromoTemplateType.AGENDA_ABERTA -> "Horários"
-                                    PromoTemplateType.TABELA_PRECOS -> "Preço (R$)"
-                                    PromoTemplateType.AVISO_REGRAS -> "Detalhe"
-                                }
-                                OutlinedTextField(
-                                    value = item.value,
-                                    onValueChange = { newVal ->
-                                        items = items.toMutableList().also {
-                                            it[index] = it[index].copy(value = newVal)
-                                        }
-                                        commitChanges()
-                                    },
-                                    label = { Text(valueHint, fontSize = 11.sp) },
-                                    singleLine = true,
-                                    modifier = Modifier.weight(1f),
-                                    shape = RoundedCornerShape(8.dp),
-                                    colors = OutlinedTextFieldDefaults.colors(
-                                        focusedBorderColor = Color(0xFFB82B62)
-                                    )
-                                )
-
-                                // Remove Button (se houver mais de 1 item)
-                                if (items.size > 1) {
-                                    IconButton(
-                                        onClick = {
-                                            items = items.toMutableList().also { it.removeAt(index) }
+                            if (promoDraft.templateType == PromoTemplateType.TABELA_PRECOS) {
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(8.dp),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    OutlinedTextField(
+                                        value = item.label,
+                                        onValueChange = { newLabel ->
+                                            items = items.toMutableList().also {
+                                                it[index] = it[index].copy(label = newLabel)
+                                            }
                                             commitChanges()
                                         },
-                                        modifier = Modifier.size(36.dp)
-                                    ) {
-                                        Icon(
-                                            Icons.Default.Delete,
-                                            contentDescription = "Remover",
-                                            tint = Color(0xFFC62828),
-                                            modifier = Modifier.size(18.dp)
+                                        label = { Text("Serviço", fontSize = 11.sp) },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1.8f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFFB82B62)
                                         )
+                                    )
+                                    OutlinedTextField(
+                                        value = item.value,
+                                        onValueChange = { newVal ->
+                                            items = items.toMutableList().also {
+                                                it[index] = it[index].copy(value = newVal)
+                                            }
+                                            commitChanges()
+                                        },
+                                        label = { Text("Preço (R$)", fontSize = 11.sp) },
+                                        singleLine = true,
+                                        modifier = Modifier.weight(1f),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFFB82B62)
+                                        )
+                                    )
+                                    if (items.size > 1) {
+                                        IconButton(
+                                            onClick = {
+                                                items = items.toMutableList().also { it.removeAt(index) }
+                                                commitChanges()
+                                            },
+                                            modifier = Modifier.size(36.dp)
+                                        ) {
+                                            Icon(
+                                                Icons.Default.Delete,
+                                                contentDescription = "Remover",
+                                                tint = Color(0xFFC62828),
+                                                modifier = Modifier.size(18.dp)
+                                            )
+                                        }
                                     }
+                                }
+                            } else {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(10.dp),
+                                    verticalArrangement = Arrangement.spacedBy(6.dp)
+                                ) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween,
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Text(
+                                            text = if (promoDraft.templateType == PromoTemplateType.AGENDA_ABERTA) "Data / Horários #${index + 1}" else "Regra #${index + 1}",
+                                            fontSize = 11.sp,
+                                            fontWeight = FontWeight.SemiBold,
+                                            color = Color(0xFF8C5A60)
+                                        )
+                                        if (items.size > 1) {
+                                            IconButton(
+                                                onClick = {
+                                                    items = items.toMutableList().also { it.removeAt(index) }
+                                                    commitChanges()
+                                                },
+                                                modifier = Modifier.size(28.dp)
+                                            ) {
+                                                Icon(
+                                                    Icons.Default.Delete,
+                                                    contentDescription = "Remover",
+                                                    tint = Color(0xFFC62828),
+                                                    modifier = Modifier.size(17.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+                                    val labelHint = if (promoDraft.templateType == PromoTemplateType.AGENDA_ABERTA) "Dia (Ex: Sexta • 28/02)" else "Título da Regra (Ex: Tolerância de 15 min)"
+                                    val valueHint = if (promoDraft.templateType == PromoTemplateType.AGENDA_ABERTA) "Horários livres (Ex: 09:00 • 11:30 • 15:00)" else "Detalhe explicativo"
+
+                                    OutlinedTextField(
+                                        value = item.label,
+                                        onValueChange = { newLabel ->
+                                            items = items.toMutableList().also {
+                                                it[index] = it[index].copy(label = newLabel)
+                                            }
+                                            commitChanges()
+                                        },
+                                        label = { Text(labelHint, fontSize = 11.sp) },
+                                        singleLine = true,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFFB82B62)
+                                        )
+                                    )
+                                    OutlinedTextField(
+                                        value = item.value,
+                                        onValueChange = { newVal ->
+                                            items = items.toMutableList().also {
+                                                it[index] = it[index].copy(value = newVal)
+                                            }
+                                            commitChanges()
+                                        },
+                                        label = { Text(valueHint, fontSize = 11.sp) },
+                                        singleLine = promoDraft.templateType == PromoTemplateType.AGENDA_ABERTA,
+                                        maxLines = 2,
+                                        modifier = Modifier.fillMaxWidth(),
+                                        shape = RoundedCornerShape(8.dp),
+                                        colors = OutlinedTextFieldDefaults.colors(
+                                            focusedBorderColor = Color(0xFFB82B62)
+                                        )
+                                    )
                                 }
                             }
                         }

@@ -77,6 +77,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
     var showDatePickerDialog by rememberSaveable { mutableStateOf(false) }
     var showThemeGallerySheet by rememberSaveable { mutableStateOf(false) }
     var themeGalleryInitialCategory by rememberSaveable { mutableStateOf(ThemeCategory.ALL) }
+    var themeGallerySubtitle by rememberSaveable { mutableStateOf("Escolha o visual do seu calendário") }
     var showLogoSettingsDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestoreConfirmDialog by rememberSaveable { mutableStateOf(false) }
@@ -175,12 +176,16 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onImportBackup = launchImportBackup,
                     onOpenQuickDatePicker = { showDatePickerDialog = true },
                     onOpenThemeGallery = { category ->
+                        themeGallerySubtitle = "Escolha o visual do seu calendário"
                         themeGalleryInitialCategory = category
                         showThemeGallerySheet = true
                     },
                     onOpenLogoSettings = { showLogoSettingsDialog = true },
                     onOpenPromotions = {
                         viewModel.navigateTo(AppScreen.PROMO_EDITOR)
+                    },
+                    onApplySeasonalPromo = { campaign ->
+                        viewModel.applySeasonalPromoPreset(campaign)
                     }
                 )
             }
@@ -192,6 +197,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onUpdateDraft = { draft -> viewModel.updatePromoDraft(draft) },
                     onResetToPreset = { type -> viewModel.resetPromoToPreset(type) },
                     onOpenThemeGallery = {
+                        themeGallerySubtitle = "Escolha o visual da sua arte"
                         themeGalleryInitialCategory = ThemeCategory.ALL
                         showThemeGallerySheet = true
                     },
@@ -216,6 +222,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onRedo = { viewModel.redo() },
                     onToggleEditMode = { viewModel.toggleEditMode() },
                     onOpenBgDialog = {
+                        themeGallerySubtitle = "Escolha o visual do seu calendário"
                         themeGalleryInitialCategory = ThemeCategory.ALL
                         showThemeGallerySheet = true
                     },
@@ -258,7 +265,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             modifier = Modifier
                 .align(Alignment.BottomCenter)
                 .navigationBarsPadding()
-                .padding(bottom = if (uiState.currentScreen == AppScreen.CALENDAR && !uiState.isEditMode) 80.dp else 16.dp)
+                .padding(bottom = if ((uiState.currentScreen == AppScreen.CALENDAR && !uiState.isEditMode) || uiState.currentScreen == AppScreen.PROMO_EDITOR) 80.dp else 16.dp)
         )
     }
 
@@ -317,6 +324,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             currentThemeId = uiState.layoutConfig.selectedThemeId,
             hasCustomBackground = uiState.hasCustomBackground,
             hasCustomLogo = uiState.hasCustomLogo,
+            subtitle = themeGallerySubtitle,
             initialCategory = themeGalleryInitialCategory,
             onSelectTheme = { theme ->
                 viewModel.selectTheme(theme)

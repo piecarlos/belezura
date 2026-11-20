@@ -72,8 +72,12 @@ object PromoRenderer {
         val monthColor = try { Color.parseColor(palette.monthColorHex) } catch (_: Exception) { Color.parseColor("#5E2326") }
 
         val primaryTextColor = if (isDark) Color.WHITE else monthColor
-        val secondaryTextColor = if (isDark) Color.parseColor("#CCCCCC") else Color.parseColor("#6E5055")
-        val highlightColor = yearColor
+        val secondaryTextColor = if (isDark) Color.parseColor("#E4E4E7") else Color.parseColor("#6E5055")
+        val highlightColor = if (isDark) {
+            if (ColorUtils.calculateContrast(yearColor, Color.parseColor("#161618")) < 3.5) Color.parseColor("#F5C869") else yearColor
+        } else {
+            yearColor
+        }
 
         // 3. Safe Margins for photographic/ornamental frames (~110px horizontal, ~180px vertical)
         val cardLeft = 110f
@@ -87,13 +91,17 @@ object PromoRenderer {
         cardRect.set(cardLeft, cardTop, cardRight, cardBottom)
 
         cardFillPaint.color = if (isDark) {
-            Color.argb(235, 24, 24, 24)
+            Color.argb(240, 22, 22, 24)
         } else {
             Color.argb(245, 255, 255, 255)
         }
         canvas.drawRoundRect(cardRect, cornerRadius, cornerRadius, cardFillPaint)
 
-        cardStrokePaint.color = accentColor
+        cardStrokePaint.color = if (isDark) {
+            Color.argb(160, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
+        } else {
+            accentColor
+        }
         cardStrokePaint.strokeWidth = 3.5f
         canvas.drawRoundRect(cardRect, cornerRadius, cornerRadius, cardStrokePaint)
 
@@ -117,7 +125,7 @@ object PromoRenderer {
         if (promoDraft.badgeText.isNotBlank()) {
             val badgeText = promoDraft.badgeText.trim().uppercase()
             val badgeTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
-            val badgeTextSize = 22f
+            val badgeTextSize = 24f
 
             textPaint.reset()
             textPaint.isAntiAlias = true
@@ -128,32 +136,32 @@ object PromoRenderer {
             textPaint.color = highlightColor
 
             val badgeTextWidth = textPaint.measureText(badgeText)
-            val pillWidth = min(cardWidth - 80f, badgeTextWidth + 48f)
-            val pillHeight = 42f
+            val pillWidth = min(cardWidth - 80f, badgeTextWidth + 56f)
+            val pillHeight = 46f
 
             pillRect.set(centerX - pillWidth / 2f, cursorY, centerX + pillWidth / 2f, cursorY + pillHeight)
 
             pillFillPaint.color = if (isDark) {
-                Color.argb(45, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
+                Color.argb(55, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
             } else {
-                Color.argb(32, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
+                Color.argb(35, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
             }
             canvas.drawRoundRect(pillRect, pillHeight / 2f, pillHeight / 2f, pillFillPaint)
 
             pillStrokePaint.color = highlightColor
-            pillStrokePaint.strokeWidth = 1.8f
+            pillStrokePaint.strokeWidth = 2f
             canvas.drawRoundRect(pillRect, pillHeight / 2f, pillHeight / 2f, pillStrokePaint)
 
             val textBaseline = pillRect.centerY() - ((textPaint.descent() + textPaint.ascent()) / 2f)
             canvas.drawText(badgeText, centerX, textBaseline, textPaint)
 
-            cursorY += pillHeight + 18f
+            cursorY += pillHeight + 20f
         }
 
         // Main Title (e.g. "Agenda Aberta")
         if (promoDraft.title.isNotBlank()) {
             val titleTypeface = FontManager.getTypeface(context, HeaderFontOption.PLAYFAIR_DISPLAY_BOLD)
-            var titleSize = 52f
+            var titleSize = 62f
 
             textPaint.reset()
             textPaint.isAntiAlias = true
@@ -170,15 +178,15 @@ object PromoRenderer {
                 textPaint.textSize = titleSize
             }
 
-            cursorY += titleSize * 0.9f
+            cursorY += titleSize * 0.92f
             canvas.drawText(promoDraft.title, centerX, cursorY, textPaint)
-            cursorY += 16f
+            cursorY += 18f
         }
 
         // Subtitle (e.g. "Garanta seu momento de autocuidado...")
         if (promoDraft.subtitle.isNotBlank()) {
             val subTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
-            var subSize = 25f
+            var subSize = 29f
 
             textPaint.reset()
             textPaint.isAntiAlias = true
@@ -195,9 +203,9 @@ object PromoRenderer {
                 textPaint.textSize = subSize
             }
 
-            cursorY += subSize * 0.9f
+            cursorY += subSize * 0.92f
             canvas.drawText(promoDraft.subtitle, centerX, cursorY, textPaint)
-            cursorY += 22f
+            cursorY += 24f
         }
 
         // Delicate ornamental divider
@@ -221,14 +229,14 @@ object PromoRenderer {
         )
         canvas.drawLine(divStart, cursorY, divEnd, cursorY, linePaint)
         linePaint.shader = null
-        cursorY += 28f
+        cursorY += 30f
 
         // 6. Reserve and Draw Footer CTA at the Bottom
-        val footerY = cardBottom - 45f
+        val footerY = cardBottom - 48f
         if (promoDraft.footerCta.isNotBlank()) {
             val footerText = promoDraft.footerCta.trim()
             val footerTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
-            var footerSize = 30f
+            var footerSize = 38f
 
             textPaint.reset()
             textPaint.isAntiAlias = true
@@ -240,7 +248,7 @@ object PromoRenderer {
             // Luminance contrast check for footer
             textPaint.color = if (isDark) {
                 val contrastRatio = ColorUtils.calculateContrast(highlightColor, Color.parseColor("#181818"))
-                if (contrastRatio < 3.5) Color.WHITE else highlightColor
+                if (contrastRatio < 3.5) Color.parseColor("#F5C869") else highlightColor
             } else {
                 val contrastRatio = ColorUtils.calculateContrast(highlightColor, Color.WHITE)
                 if (contrastRatio < 3.0) monthColor else highlightColor
@@ -258,7 +266,7 @@ object PromoRenderer {
 
         // 7. Render Template-Specific Body Items
         val usableTop = cursorY
-        val usableBottom = footerY - 50f
+        val usableBottom = footerY - 54f
         val availableHeight = max(100f, usableBottom - usableTop)
         val items = promoDraft.items.take(PromoDraft.MAX_ITEMS)
 
@@ -328,43 +336,43 @@ object PromoRenderer {
         accentColor: Int
     ) {
         val count = items.size
-        val totalSpacing = availableHeight * 0.15f
-        val spacing = if (count > 1) totalSpacing / (count - 1) else 0f
-        val itemHeight = min(120f, (availableHeight - totalSpacing) / count)
-        val width = right - left
+        val itemHeight = if (count <= 4) 124f else 108f
+        val spacing = if (count <= 4) 22f else 16f
+        val totalHeight = count * itemHeight + (count - 1) * spacing
+        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
 
         val labelTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val valueTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
 
         for (i in items.indices) {
             val item = items[i]
-            val itemTop = top + i * (itemHeight + spacing)
+            val itemTop = startY + i * (itemHeight + spacing)
             val itemBottom = itemTop + itemHeight
 
             itemRect.set(left, itemTop, right, itemBottom)
 
             // Item card background
             cardFillPaint.color = if (isDark) {
-                Color.argb(40, 255, 255, 255)
+                Color.argb(45, 255, 255, 255)
             } else {
                 Color.argb(35, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
             }
-            canvas.drawRoundRect(itemRect, 18f, 18f, cardFillPaint)
+            canvas.drawRoundRect(itemRect, 20f, 20f, cardFillPaint)
 
-            cardStrokePaint.color = if (isDark) Color.argb(80, 255, 255, 255) else accentColor
-            cardStrokePaint.strokeWidth = 1.5f
-            canvas.drawRoundRect(itemRect, 18f, 18f, cardStrokePaint)
+            cardStrokePaint.color = if (isDark) Color.argb(90, 255, 255, 255) else accentColor
+            cardStrokePaint.strokeWidth = 1.8f
+            canvas.drawRoundRect(itemRect, 20f, 20f, cardStrokePaint)
 
             // Label (Left: Dia / Data)
             textPaint.reset()
             textPaint.isAntiAlias = true
             textPaint.isSubpixelText = true
             textPaint.typeface = labelTypeface
-            textPaint.textSize = 28f
+            textPaint.textSize = 34f
             textPaint.textAlign = Paint.Align.LEFT
             textPaint.color = primaryColor
 
-            val labelX = left + 26f
+            val labelX = left + 28f
             val centerY = (itemTop + itemBottom) / 2f
             val textBaseline = centerY - ((textPaint.descent() + textPaint.ascent()) / 2f)
             canvas.drawText(item.label, labelX, textBaseline, textPaint)
@@ -372,11 +380,11 @@ object PromoRenderer {
             // Value (Right: Horários) in pill container or accent text
             if (item.value.isNotBlank()) {
                 textPaint.typeface = valueTypeface
-                textPaint.textSize = 26f
+                textPaint.textSize = 32f
                 textPaint.textAlign = Paint.Align.RIGHT
                 textPaint.color = highlightColor
 
-                val valueX = right - 26f
+                val valueX = right - 28f
                 val valueBaseline = centerY - ((textPaint.descent() + textPaint.ascent()) / 2f)
                 canvas.drawText(item.value, valueX, valueBaseline, textPaint)
             }
@@ -397,31 +405,33 @@ object PromoRenderer {
         accentColor: Int
     ) {
         val count = items.size
-        val rowHeight = availableHeight / count
+        val rowHeight = if (count <= 4) 100f else if (count == 5) 90f else 82f
+        val totalHeight = count * rowHeight
+        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
 
         val labelTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val priceTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
 
         val dotPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = if (isDark) Color.argb(120, 255, 255, 255) else Color.argb(120, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
-            textSize = 24f
+            color = if (isDark) Color.argb(130, 255, 255, 255) else Color.argb(130, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
+            textSize = 28f
             typeface = Typeface.MONOSPACE
         }
 
         for (i in items.indices) {
             val item = items[i]
-            val rowCenterY = top + (i + 0.5f) * rowHeight
+            val rowCenterY = startY + (i + 0.5f) * rowHeight
 
             // Right: Price (fixed right alignment)
             textPaint.reset()
             textPaint.isAntiAlias = true
             textPaint.isSubpixelText = true
             textPaint.typeface = priceTypeface
-            textPaint.textSize = 32f
+            textPaint.textSize = 38f
             textPaint.textAlign = Paint.Align.RIGHT
             textPaint.color = highlightColor
 
-            val priceX = right - 10f
+            val priceX = right - 12f
             val priceBaseline = rowCenterY - ((textPaint.descent() + textPaint.ascent()) / 2f)
             val priceWidth = if (item.value.isNotBlank()) textPaint.measureText(item.value) else 0f
             if (item.value.isNotBlank()) {
@@ -430,13 +440,13 @@ object PromoRenderer {
 
             // Left: Service Label
             textPaint.typeface = labelTypeface
-            var labelSize = 29f
+            var labelSize = 34f
             textPaint.textSize = labelSize
             textPaint.textAlign = Paint.Align.LEFT
             textPaint.color = primaryColor
 
-            val labelX = left + 10f
-            val maxLabelWidth = (right - left) - priceWidth - 60f
+            val labelX = left + 12f
+            val maxLabelWidth = (right - left) - priceWidth - 70f
             var measuredLabelW = textPaint.measureText(item.label)
             if (measuredLabelW > maxLabelWidth && maxLabelWidth > 0f) {
                 labelSize *= (maxLabelWidth / measuredLabelW)
@@ -450,9 +460,9 @@ object PromoRenderer {
             if (item.value.isNotBlank()) {
                 val dotsStart = labelX + measuredLabelW + 16f
                 val dotsEnd = priceX - priceWidth - 16f
-                if (dotsEnd > dotsStart + 20f) {
+                if (dotsEnd > dotsStart + 24f) {
                     var dotX = dotsStart
-                    val dotStep = 18f
+                    val dotStep = 20f
                     val dotBaseline = rowCenterY - ((dotPaint.descent() + dotPaint.ascent()) / 2f)
                     while (dotX < dotsEnd) {
                         canvas.drawText("·", dotX, dotBaseline, dotPaint)
@@ -478,51 +488,55 @@ object PromoRenderer {
         highlightColor: Int
     ) {
         val count = items.size
-        val rowHeight = availableHeight / count
+        val itemHeight = if (count <= 3) 136f else if (count <= 4) 120f else 105f
+        val spacing = if (count <= 3) 24f else 18f
+        val totalHeight = count * itemHeight + (count - 1) * spacing
+        val startY = if (totalHeight < availableHeight) top + (availableHeight - totalHeight) / 2f else top
 
         val titleTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.BOLD)
         val valueTypeface = Typeface.create(Typeface.SANS_SERIF, Typeface.NORMAL)
         val badgeTypeface = FontManager.getTypeface(context, HeaderFontOption.FREDOKA_BOLD)
 
-        val bulletRadius = 18f
+        val bulletRadius = 22f
 
         for (i in items.indices) {
             val item = items[i]
-            val rowCenterY = top + (i + 0.5f) * rowHeight
+            val itemTop = startY + i * (itemHeight + spacing)
+            val itemCenterY = itemTop + itemHeight / 2f
 
             // Numbered bullet circle on left
             val bulletCenterX = left + bulletRadius + 8f
-            val bulletCenterY = rowCenterY - 10f
+            val bulletCenterY = if (item.value.isNotBlank()) itemTop + bulletRadius + 8f else itemCenterY
 
             pillFillPaint.color = if (isDark) {
-                Color.argb(60, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
+                Color.argb(70, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
             } else {
-                Color.argb(38, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
+                Color.argb(40, Color.red(highlightColor), Color.green(highlightColor), Color.blue(highlightColor))
             }
             canvas.drawCircle(bulletCenterX, bulletCenterY, bulletRadius, pillFillPaint)
 
             pillStrokePaint.color = highlightColor
-            pillStrokePaint.strokeWidth = 1.5f
+            pillStrokePaint.strokeWidth = 1.8f
             canvas.drawCircle(bulletCenterX, bulletCenterY, bulletRadius, pillStrokePaint)
 
             // Number inside bullet
             textPaint.reset()
             textPaint.isAntiAlias = true
             textPaint.typeface = badgeTypeface
-            textPaint.textSize = 20f
+            textPaint.textSize = 24f
             textPaint.textAlign = Paint.Align.CENTER
             textPaint.color = highlightColor
             val bulletBaseline = bulletCenterY - ((textPaint.descent() + textPaint.ascent()) / 2f)
             canvas.drawText("${i + 1}", bulletCenterX, bulletBaseline, textPaint)
 
             // Text block to the right of bullet
-            val contentLeft = bulletCenterX + bulletRadius + 18f
-            val contentRight = right - 10f
+            val contentLeft = bulletCenterX + bulletRadius + 20f
+            val contentRight = right - 12f
             val maxTextWidth = contentRight - contentLeft
 
             // Rule Title (Label)
             textPaint.typeface = titleTypeface
-            var titleSize = 27f
+            var titleSize = 34f
             textPaint.textSize = titleSize
             textPaint.textAlign = Paint.Align.LEFT
             textPaint.color = primaryColor
@@ -532,7 +546,7 @@ object PromoRenderer {
                 titleSize *= (maxTextWidth / measuredTitleW)
                 textPaint.textSize = titleSize
             }
-            val titleY = rowCenterY - 12f
+            val titleY = if (item.value.isNotBlank()) itemTop + titleSize else itemCenterY - ((textPaint.descent() + textPaint.ascent()) / 2f)
             canvas.drawText(item.label, contentLeft, titleY, textPaint)
 
             // Rule Detail (Value)
@@ -541,10 +555,10 @@ object PromoRenderer {
                 bodyTextPaint.isAntiAlias = true
                 bodyTextPaint.isSubpixelText = true
                 bodyTextPaint.typeface = valueTypeface
-                bodyTextPaint.textSize = 22f
+                bodyTextPaint.textSize = 27f
                 bodyTextPaint.color = secondaryColor
 
-                val detailY = titleY + 30f
+                val detailY = titleY + 34f
                 val measuredDetailW = bodyTextPaint.measureText(item.value)
                 if (measuredDetailW <= maxTextWidth) {
                     canvas.drawText(item.value, contentLeft, detailY, bodyTextPaint)
@@ -554,12 +568,12 @@ object PromoRenderer {
                         item.value, 0, item.value.length,
                         bodyTextPaint, maxTextWidth.toInt()
                     ).setAlignment(Layout.Alignment.ALIGN_NORMAL)
-                        .setLineSpacing(0f, 1.1f)
+                        .setLineSpacing(0f, 1.15f)
                         .setMaxLines(2)
                         .build()
 
                     canvas.save()
-                    canvas.translate(contentLeft, titleY + 10f)
+                    canvas.translate(contentLeft, titleY + 8f)
                     staticLayout.draw(canvas)
                     canvas.restore()
                 }
