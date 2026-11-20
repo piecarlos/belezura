@@ -407,7 +407,8 @@ fun ThemeCard(
             }
 
             // Subtle calendar grid mini-sketch in center
-            val isDark = (theme.id == "black_friday_glam")
+            val isDark = theme.id == "black_friday_glam" || theme.id == "black_friday_luxo" ||
+                (try { androidx.core.graphics.ColorUtils.calculateLuminance(android.graphics.Color.parseColor(theme.palette.backgroundBaseHex)) < 0.35f } catch (_: Exception) { false })
             Box(
                 modifier = Modifier
                     .fillMaxWidth(0.82f)

@@ -48,16 +48,24 @@ object BackgroundManager {
         }
 
         val finalBitmap = loaded ?: run {
-            try {
-                BitmapFactory.decodeResource(context.resources, R.drawable.bg_base, options)
-            } catch (e: Exception) {
-                Log.w(TAG, "Falha ao carregar R.drawable.bg_base: ${e.message}")
-                null
-            }
+            decodeResourceBitmap(context, R.drawable.bg_base)
         } ?: createFallbackBitmap()
 
         cachedBitmap = finalBitmap
         return finalBitmap
+    }
+
+    fun decodeResourceBitmap(context: Context, resId: Int): Bitmap? {
+        val options = BitmapFactory.Options().apply {
+            inScaled = false
+            inPreferredConfig = Bitmap.Config.ARGB_8888
+        }
+        return try {
+            BitmapFactory.decodeResource(context.resources, resId, options)
+        } catch (e: Exception) {
+            Log.w(TAG, "Falha ao decodificar recurso $resId: ${e.message}")
+            null
+        }
     }
 
     fun hasCustomBackground(context: Context): Boolean {

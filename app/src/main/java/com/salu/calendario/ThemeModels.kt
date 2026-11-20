@@ -11,6 +11,7 @@ enum class ThemeCategory(val displayName: String) {
 
 enum class ThemeSourceType {
     BUILTIN,
+    EMBEDDED,
     PROCEDURAL,
     CUSTOM
 }

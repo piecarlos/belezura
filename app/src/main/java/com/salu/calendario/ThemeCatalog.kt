@@ -127,6 +127,128 @@ object ThemeCatalog : ThemeRepository {
             )
         ),
 
+        // 6 Novas Molduras Sazonais Integradas (WebP 1080x1920)
+        ThemeItem(
+            id = "black_friday_luxo",
+            name = "Black Friday Luxo",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "black_friday",
+            isPro = true,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#D4AF37",
+            drawableResId = R.drawable.bg_black_friday_luxo,
+            description = "Moldura escura e luxuosa com detalhes em ouro luminoso para a Black Friday.",
+            palette = ThemePalette(
+                monthColorHex = "#FFE082",
+                yearColorHex = "#D4AF37",
+                calendarAccentHex = "#D4AF37",
+                backgroundBaseHex = "#121214",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "natal_classico",
+            name = "Natal Clássico",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "christmas_newyear",
+            isPro = true,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#C9972B",
+            drawableResId = R.drawable.bg_natal_2,
+            description = "Moldura natalina tradicional com guirlandas em bordô profundo e dourado.",
+            palette = ThemePalette(
+                monthColorHex = "#6D1B2B",
+                yearColorHex = "#C9972B",
+                calendarAccentHex = "#D4AF37",
+                backgroundBaseHex = "#FFFDF8",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "natal_clean",
+            name = "Natal Clean",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "christmas_newyear",
+            isPro = false,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#7A1F33",
+            drawableResId = R.drawable.bg_natal_clean,
+            description = "Opção natalina elegante e suave em tons de vinho, creme e detalhes delicados.",
+            palette = ThemePalette(
+                monthColorHex = "#7A1F33",
+                yearColorHex = "#B8860B",
+                calendarAccentHex = "#2E6B53",
+                backgroundBaseHex = "#FFFDF9",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "natal_minimal",
+            name = "Natal Minimal",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "christmas_newyear",
+            isPro = true,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#9C7A3C",
+            drawableResId = R.drawable.bg_natal_minimal,
+            description = "Estética minimalista para o Natal com folhagens douradas sobre fundo champanhe.",
+            palette = ThemePalette(
+                monthColorHex = "#5A4220",
+                yearColorHex = "#9C7A3C",
+                calendarAccentHex = "#C4A882",
+                backgroundBaseHex = "#FDFBF7",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "ano_novo_glam",
+            name = "Ano Novo Glam",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "christmas_newyear",
+            isPro = false,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#A67C2E",
+            drawableResId = R.drawable.bg_ano_novo_glam,
+            description = "Brilho e sofisticação de Réveillon em fundo perolado com dourado refinado.",
+            palette = ThemePalette(
+                monthColorHex = "#4A3815",
+                yearColorHex = "#A67C2E",
+                calendarAccentHex = "#D4AF37",
+                backgroundBaseHex = "#FAF8F5",
+                suggestedMonthFont = HeaderFontOption.CINZEL_BOLD,
+                suggestedYearFont = HeaderFontOption.CINZEL_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+        ThemeItem(
+            id = "carnaval_glam",
+            name = "Carnaval Glam",
+            category = ThemeCategory.SEASONAL,
+            seasonalTag = "carnival",
+            isPro = true,
+            sourceType = ThemeSourceType.EMBEDDED,
+            accentHex = "#6B213A",
+            drawableResId = R.drawable.bg_carnaval_glam,
+            description = "Festa e sofisticação carnavalesca com tons de vinho, rosé suave e confetes dourados.",
+            palette = ThemePalette(
+                monthColorHex = "#6B213A",
+                yearColorHex = "#C97B84",
+                calendarAccentHex = "#D4AF37",
+                backgroundBaseHex = "#FFF5F8",
+                suggestedMonthFont = HeaderFontOption.PLAYFAIR_DISPLAY_BOLD,
+                suggestedYearFont = HeaderFontOption.FREDOKA_BOLD,
+                defaultCalendarScale = 0.88f
+            )
+        ),
+
         // 6 Temas de Prévia PRO (com selo de diamante transparente)
         ThemeItem(
             id = "black_friday_glam",
@@ -276,15 +398,7 @@ object ThemeCatalog : ThemeRepository {
 
         val theme = getThemeById(themeId)
         if (theme?.drawableResId != null) {
-            val options = BitmapFactory.Options().apply {
-                inScaled = false
-                inPreferredConfig = Bitmap.Config.ARGB_8888
-            }
-            val loaded = try {
-                BitmapFactory.decodeResource(context.resources, theme.drawableResId, options)
-            } catch (e: Exception) {
-                null
-            }
+            val loaded = BackgroundManager.decodeResourceBitmap(context, theme.drawableResId)
             if (loaded != null) {
                 proceduralCache[themeId] = loaded
                 return loaded

@@ -103,9 +103,15 @@ app/src/main/
 └── res/
     ├── drawable/ic_launcher_background.xml # Fundo vinho sólido (#5B0224) para Adaptive Icon
     ├── drawable-nodpi/
-    │   ├── bg_base.webp         # Fundo floral clássico limpo sem logo em 1080×1920 (~47 KB)
-    │   ├── bg_make_glam.webp    # Fundo Make Glam Luxo em 1080×1920 (~150 KB)
-    │   └── bg_make_glam_2.webp  # Fundo Make Glam Floral em 1080×1920 (~140 KB)
+    │   ├── bg_base.webp               # Fundo floral clássico limpo sem logo em 1080×1920 (~33 KB)
+    │   ├── bg_make_glam.webp          # Fundo Make Glam Luxo em 1080×1920 (~41 KB)
+    │   ├── bg_make_glam_2.webp        # Fundo Make Glam Floral em 1080×1920 (~67 KB)
+    │   ├── bg_black_friday_luxo.webp  # Fundo Black Friday Luxo escuro/dourado em 1080×1920 (~27 KB)
+    │   ├── bg_natal_2.webp            # Fundo Natal Clássico bordô/dourado em 1080×1920 (~35 KB)
+    │   ├── bg_natal_clean.webp        # Fundo Natal Clean suave/vinho em 1080×1920 (~54 KB)
+    │   ├── bg_natal_minimal.webp      # Fundo Natal Minimal champanhe/dourado em 1080×1920 (~30 KB)
+    │   ├── bg_ano_novo_glam.webp      # Fundo Ano Novo Glam perolado/dourado em 1080×1920 (~21 KB)
+    │   └── bg_carnaval_glam.webp      # Fundo Carnaval Glam vinho/rosé em 1080×1920 (~50 KB)
     ├── font/                    # Fontes TrueType estáticas embutidas
     │   ├── cinzel_bold.ttf
     │   ├── fredoka_bold.ttf
@@ -165,7 +171,7 @@ Ao realizar qualquer alteração futura, respeite obrigatoriamente as seguintes 
 5. **Insets e Barras do Sistema:**
    - Todas as barras superiores, inferiores e o painel de ajuste devem conter `statusBarsPadding()` e `navigationBarsPadding()`. Nunca remova esses insets para não causar sobreposição com os botões virtuais do Android (gestos/3 botões).
 6. **Proteção R8 e Shrinkage de Recursos:**
-   - As fontes e os fundos base são protegidos pelo arquivo `res/raw/keep.xml` (`tools:keep="@font/*,@drawable/bg_base,@drawable/bg_make_glam,@drawable/bg_make_glam_2"`).
+   - As fontes e os fundos base são protegidos pelo arquivo `res/raw/keep.xml` (`tools:keep="@font/*,@drawable/bg_base,@drawable/bg_make_glam,@drawable/bg_make_glam_2,@drawable/bg_black_friday_luxo,@drawable/bg_natal_minimal,@drawable/bg_natal_clean,@drawable/bg_natal_2,@drawable/bg_ano_novo_glam,@drawable/bg_carnaval_glam"`).
    - `FontManager` e `BackgroundManager` devem continuar referenciando recursos diretamente via identificadores estáticos gerados (`R.font.*` e `R.drawable.*`), evitando busca reflexiva por strings (`getIdentifier`).
 7. **Autoridade do FileProvider Dinâmica:**
    - O `AndroidManifest.xml` utiliza `android:authorities="${applicationId}.fileprovider"`.
@@ -327,6 +333,17 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
   - **Motor Gráfico WYSIWYG 1080×1920 (`PromoRenderer.kt`):** Título principal com tipografia selecionável via `FontManager` (Cinzel, Playfair, Fredoka, Padrão); aplicação de `accentColorHex` com contraste inteligente por luminância preservado; método público `getLogoBounds(context, promoDraft): RectF?` para cálculo de limites e renderização precisa com escala e offset customizados.
   - **Editor Interativo (`PromoEditorScreen.kt` & `CalendarViewModel.kt`):** Gestos de arrastar e pinça/escala na logo diretamente no preview do canvas 1080x1920; BottomSheet organizado em abas limpas (**Texto & Itens** e **Visual & Logo**), com seletor de fontes, paleta rápida de cores de destaque com opção "Automático" e botões rápidos para centralizar e resetar posição/escala da logomarca. Ações no `CalendarViewModel` com persistência automática no `SharedPreferences`.
   - **Suíte de Testes:** `PromoModelsTest.kt` atualizado com cobertura de round-trip dos novos campos e teste estrito de retrocompatibilidade com JSONs legados.
+- **Sprint C.3 — Integração das 6 Molduras Sazonais WebP (Entregue):**
+  - **Proteção R8 (`res/raw/keep.xml`):** Inclusão de `@drawable/bg_black_friday_luxo`, `@drawable/bg_natal_minimal`, `@drawable/bg_natal_clean`, `@drawable/bg_natal_2`, `@drawable/bg_ano_novo_glam` e `@drawable/bg_carnaval_glam` na diretiva `tools:keep`.
+  - **Catálogo de Temas (`ThemeCatalog.kt`):** Registro dos 6 novos temas com `ThemeSourceType.EMBEDDED` na categoria `SEASONAL` ("Em Alta / Datas"):
+    1. *Black Friday Luxo* (`bg_black_friday_luxo`): fundo escuro, detalhes em ouro luminoso (`#FFE082` / `#D4AF37`), `isPro = true`.
+    2. *Natal Clássico* (`bg_natal_2`): creme quente, bordô profundo (`#6D1B2B`) e dourado, `isPro = true`.
+    3. *Natal Clean* (`bg_natal_clean`): creme suave, vinho (`#7A1F33`) e verde/dourado discreto, `isPro = false` (sazonal gratuito).
+    4. *Natal Minimal* (`bg_natal_minimal`): branco/champanhe com dourado queimado (`#9C7A3C`), `isPro = true`.
+    5. *Ano Novo Glam* (`bg_ano_novo_glam`): perolado com dourado elegante (`#A67C2E`), `isPro = false` (sazonal gratuito).
+    6. *Carnaval Glam* (`bg_carnaval_glam`): vinho, rosé e confetes dourados (`#6B213A`), `isPro = true`.
+    Todos configurados com `defaultCalendarScale = 0.88f` para proteger as molduras decorativas dos cantos.
+  - **Decodificação 1:1 e Renderização (`BackgroundManager.kt`, `ThemeGallerySheet.kt`, `CalendarRenderer.kt`, `PromoRenderer.kt`):** Método centralizado `decodeResourceBitmap` com `inScaled = false` e `ARGB_8888`, miniaturas reais exibidas na grade da galeria e contraste adaptativo por luminância em fundos escuros/claros.
 - **Suíte de Testes Automatizados:**
   - `WhatsAppHelperTest.kt`: Validação dos 3 templates de mensagem, formatação de dias da semana em pt-BR e higienização de nomes.
   - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.
