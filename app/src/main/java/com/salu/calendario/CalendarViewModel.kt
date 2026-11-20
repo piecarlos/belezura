@@ -402,6 +402,15 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         _uiState.update { it.copy(selectedElement = element) }
     }
 
+    fun openEditModeWithElement(element: EditableElement) {
+        _uiState.update {
+            it.copy(
+                isEditMode = true,
+                selectedElement = element
+            )
+        }
+    }
+
     fun dragElement(element: EditableElement, deltaX: Float, deltaY: Float) {
         val cfg = _uiState.value.layoutConfig
         val updated = when (element) {
@@ -454,7 +463,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             EditableElement.MONTH -> cfg.copy(monthScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.YEAR -> cfg.copy(yearScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.GRID_CARD -> cfg.copy(cardScale = scale.coerceIn(0.7f, 1.25f))
-            EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.5f, 2.0f))
+            EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.50f, 2.20f))
             EditableElement.NONE -> cfg
         }
         _uiState.update { it.copy(layoutConfig = updated) }
@@ -666,7 +675,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun updateLogoScale(scale: Float) {
-        val updated = _uiState.value.layoutConfig.copy(logoScale = scale.coerceIn(0.5f, 2.0f))
+        val updated = _uiState.value.layoutConfig.copy(logoScale = scale.coerceIn(0.50f, 2.20f))
         _uiState.update { it.copy(layoutConfig = updated) }
         saveLayoutConfig(updated)
     }

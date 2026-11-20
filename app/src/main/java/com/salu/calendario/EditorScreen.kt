@@ -10,8 +10,14 @@ import androidx.compose.animation.slideInVertically
 import androidx.compose.animation.slideOutVertically
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.gestures.awaitEachGesture
+import androidx.compose.foundation.gestures.awaitFirstDown
+import androidx.compose.foundation.gestures.calculatePan
+import androidx.compose.foundation.gestures.calculateZoom
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.ui.geometry.Offset
+import kotlin.math.abs
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
@@ -92,6 +98,7 @@ fun EditorScreen(
     onShare: (Context) -> Unit,
     onCellClick: (Int) -> Unit,
     onElementSelect: (EditableElement) -> Unit,
+    onOpenEditModeWithElement: (EditableElement) -> Unit = {},
     onDrag: (EditableElement, Float, Float) -> Unit,
     onScaleChange: (Float) -> Unit,
     onMonthFontChange: (HeaderFontOption) -> Unit,
@@ -361,7 +368,13 @@ fun EditorScreen(
                         if (uiState.isEditMode) {
                             onDrag(element, dx, dy)
                         }
-                    }
+                    },
+                    onScaleChange = { newScale ->
+                        if (uiState.isEditMode) {
+                            onScaleChange(newScale)
+                        }
+                    },
+                    onOpenEditModeWithElement = onOpenEditModeWithElement
                 )
             }
 
@@ -400,7 +413,9 @@ fun CalendarCanvasView(
     uiState: CalendarUiState,
     onCellClick: (Int) -> Unit,
     onElementSelect: (EditableElement) -> Unit,
-    onDrag: (EditableElement, Float, Float) -> Unit
+    onDrag: (EditableElement, Float, Float) -> Unit,
+    onScaleChange: (Float) -> Unit = {},
+    onOpenEditModeWithElement: (EditableElement) -> Unit = {}
 ) {
     val context = LocalContext.current
     val rowCount = CalendarEngine.calculateRowCount(uiState.currentYearMonth)
@@ -423,30 +438,71 @@ fun CalendarCanvasView(
                 .clip(RoundedCornerShape(12.dp))
                 .pointerInput(uiState.isEditMode, uiState.selectedElement, rowCount) {
                     if (uiState.isEditMode) {
-                        detectDragGestures(
-                            onDragStart = { offset ->
-                                val vx = offset.x * (CalendarRenderer.VIRTUAL_WIDTH / size.width.toFloat())
-                                val vy = offset.y * (CalendarRenderer.VIRTUAL_HEIGHT / size.height.toFloat())
-                                val hit = CalendarRenderer.getHitElement(vx, vy, uiState.layoutConfig)
-                                if (hit != EditableElement.NONE) {
-                                    onElementSelect(hit)
-                                }
-                            },
-                            onDrag = { change, dragAmount ->
-                                change.consume()
-                                val scale = CalendarRenderer.VIRTUAL_WIDTH / size.width.toFloat()
-                                val dx = dragAmount.x * scale
-                                val dy = dragAmount.y * scale
-                                onDrag(uiState.selectedElement, dx, dy)
+                        awaitEachGesture {
+                            val down = awaitFirstDown(requireUnconsumed = false)
+                            val vx = down.position.x * (CalendarRenderer.VIRTUAL_WIDTH / size.width.toFloat())
+                            val vy = down.position.y * (CalendarRenderer.VIRTUAL_HEIGHT / size.height.toFloat())
+                            val hit = CalendarRenderer.getHitElement(vx, vy, uiState.layoutConfig)
+                            if (hit != EditableElement.NONE) {
+                                onElementSelect(hit)
                             }
-                        )
+
+                            var pastTouchSlop = false
+                            val touchSlop = viewConfiguration.touchSlop
+                            var panAccumulated = Offset.Zero
+
+                            do {
+                                val event = awaitPointerEvent()
+                                val canceled = event.changes.any { it.isConsumed }
+                                if (canceled) break
+
+                                val zoomChange = event.calculateZoom()
+                                val panChange = event.calculatePan()
+
+                                if (!pastTouchSlop) {
+                                    panAccumulated += panChange
+                                    val isMultiTouch = event.changes.size > 1
+                                    if (panAccumulated.getDistance() > touchSlop || isMultiTouch || abs(zoomChange - 1f) > 0.01f) {
+                                        pastTouchSlop = true
+                                    }
+                                }
+
+                                if (pastTouchSlop) {
+                                    val scaleFactor = CalendarRenderer.VIRTUAL_WIDTH / size.width.toFloat()
+                                    val targetElement = if (hit != EditableElement.NONE) hit else uiState.selectedElement
+
+                                    if (targetElement == EditableElement.LOGO) {
+                                        if (zoomChange != 1f) {
+                                            val currentScale = uiState.layoutConfig.logoScale
+                                            val newScale = (currentScale * zoomChange).coerceIn(0.50f, 2.20f)
+                                            onScaleChange(newScale)
+                                        }
+                                        if (panChange != Offset.Zero) {
+                                            onDrag(EditableElement.LOGO, panChange.x * scaleFactor, panChange.y * scaleFactor)
+                                        }
+                                    } else if (targetElement != EditableElement.NONE) {
+                                        if (panChange != Offset.Zero) {
+                                            onDrag(targetElement, panChange.x * scaleFactor, panChange.y * scaleFactor)
+                                        }
+                                    }
+                                    event.changes.forEach { it.consume() }
+                                }
+                            } while (event.changes.any { it.pressed })
+                        }
                     } else {
                         detectTapGestures { offset ->
                             val vx = offset.x * (CalendarRenderer.VIRTUAL_WIDTH / size.width.toFloat())
                             val vy = offset.y * (CalendarRenderer.VIRTUAL_HEIGHT / size.height.toFloat())
-                            val slot = CalendarRenderer.getCellAt(vx, vy, uiState.layoutConfig, rowCount)
-                            if (slot != null) {
-                                onCellClick(slot)
+                            val hit = CalendarRenderer.getHitElement(vx, vy, uiState.layoutConfig)
+                            if (hit == EditableElement.LOGO && uiState.layoutConfig.logoEnabled) {
+                                onOpenEditModeWithElement(EditableElement.LOGO)
+                            } else {
+                                val slot = CalendarRenderer.getCellAt(vx, vy, uiState.layoutConfig, rowCount)
+                                if (slot != null) {
+                                    onCellClick(slot)
+                                } else if (hit != EditableElement.NONE && hit != EditableElement.GRID_CARD) {
+                                    onOpenEditModeWithElement(hit)
+                                }
                             }
                         }
                     }

@@ -385,7 +385,7 @@ fun LayoutAdjustmentPanel(
 
                         val scaleRange = when (currentElement) {
                             EditableElement.GRID_CARD -> 0.70f..1.25f
-                            EditableElement.LOGO -> 0.50f..2.00f
+                            EditableElement.LOGO -> 0.50f..2.20f
                             else -> 0.60f..1.60f
                         }
 

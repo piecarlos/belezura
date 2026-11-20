@@ -112,7 +112,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
     }
 
     val logoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickVisualMedia()
+        contract = ActivityResultContracts.GetContent()
     ) { uri ->
         if (uri != null) {
             viewModel.onLogoPicked(uri)
@@ -195,6 +195,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onShare = { ctx -> viewModel.shareCalendar(ctx) },
                     onCellClick = { slotIndex -> viewModel.openCellEditor(slotIndex) },
                     onElementSelect = { element -> viewModel.selectElement(element) },
+                    onOpenEditModeWithElement = { element -> viewModel.openEditModeWithElement(element) },
                     onDrag = { element, dx, dy -> viewModel.dragElement(element, dx, dy) },
                     onScaleChange = { scale -> viewModel.updateSelectedElementScale(scale) },
                     onMonthFontChange = { font -> viewModel.updateMonthFont(font) },
@@ -206,9 +207,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onCenterElementX = { element -> viewModel.centerElementX(element) },
                     onResetLayout = { viewModel.resetLayout() },
                     onUploadLogo = {
-                        logoPickerLauncher.launch(
-                            androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                        )
+                        logoPickerLauncher.launch("image/*")
                     },
                     onToggleLogoEnabled = { viewModel.toggleLogoEnabled(it) },
                     onLogoModeChange = { viewModel.updateLogoMode(it) },
@@ -307,9 +306,7 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             logoEnabled = uiState.layoutConfig.logoEnabled,
             logoMode = uiState.layoutConfig.logoMode,
             onUploadClick = {
-                logoPickerLauncher.launch(
-                    androidx.activity.result.PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
-                )
+                logoPickerLauncher.launch("image/*")
             },
             onToggleEnabled = { viewModel.toggleLogoEnabled(it) },
             onModeChange = { viewModel.updateLogoMode(it) },

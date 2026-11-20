@@ -502,7 +502,7 @@ object CalendarRenderer {
 
     fun calculateLogoBounds(layoutConfig: LayoutConfig, logoWidth: Int, logoHeight: Int): RectF {
         val aspect = if (logoHeight > 0) logoWidth.toFloat() / logoHeight.toFloat() else 1f
-        val targetH = 170f * layoutConfig.logoScale
+        val targetH = 205f * layoutConfig.logoScale
         val targetW = targetH * aspect
         val centerX = 540f + layoutConfig.logoOffsetX
         val centerY = 1750f + layoutConfig.logoOffsetY
@@ -636,9 +636,18 @@ object CalendarRenderer {
 
     // Touch hit testing helpers
     fun getHitElement(x: Float, y: Float, layoutConfig: LayoutConfig): EditableElement {
-        val cardBounds = calculateCardBounds(layoutConfig)
+        // 1. Check Logo zone first (if enabled in footer)
+        if (layoutConfig.logoEnabled) {
+            val centerX = 540f + layoutConfig.logoOffsetX
+            val centerY = 1750f + layoutConfig.logoOffsetY
+            val halfW = max(260f * layoutConfig.logoScale, 160f) + 40f
+            val halfH = max(115f * layoutConfig.logoScale, 80f) + 40f
+            if (x in (centerX - halfW)..(centerX + halfW) && y in (centerY - halfH)..(centerY + halfH)) {
+                return EditableElement.LOGO
+            }
+        }
 
-        // Check Month zone
+        // 2. Check Month zone
         val monthPad = 50f
         if (x in (layoutConfig.monthX - 300f)..(layoutConfig.monthX + 300f) &&
             y in (layoutConfig.monthY - 100f)..(layoutConfig.monthY + monthPad)
@@ -646,27 +655,17 @@ object CalendarRenderer {
             return EditableElement.MONTH
         }
 
-        // Check Year zone
+        // 3. Check Year zone
         if (x in (layoutConfig.yearX - 250f)..(layoutConfig.yearX + 250f) &&
             y in (layoutConfig.yearY - 120f)..(layoutConfig.yearY + 80f)
         ) {
             return EditableElement.YEAR
         }
 
-        // Check Card zone
+        // 4. Check Card zone
+        val cardBounds = calculateCardBounds(layoutConfig)
         if (cardBounds.contains(x, y)) {
             return EditableElement.GRID_CARD
-        }
-
-        // Check Logo zone (if enabled)
-        if (layoutConfig.logoEnabled) {
-            val centerX = 540f + layoutConfig.logoOffsetX
-            val centerY = 1750f + layoutConfig.logoOffsetY
-            val halfW = max(110f * layoutConfig.logoScale, 80f) + 35f
-            val halfH = max(90f * layoutConfig.logoScale, 70f) + 35f
-            if (x in (centerX - halfW)..(centerX + halfW) && y in (centerY - halfH)..(centerY + halfH)) {
-                return EditableElement.LOGO
-            }
         }
 
         return EditableElement.NONE
