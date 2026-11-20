@@ -28,6 +28,7 @@ android {
         vectorDrawables {
             useSupportLibrary = true
         }
+        buildConfigField("Boolean", "PRO_GOD_MODE", "false")
     }
 
     signingConfigs {
@@ -52,6 +53,13 @@ android {
                 "proguard-rules.pro"
             )
         }
+        create("godmode") {
+            initWith(getByName("debug"))
+            applicationIdSuffix = ".godmode"
+            resValue("string", "app_name", "Belezura GOD")
+            buildConfigField("Boolean", "PRO_GOD_MODE", "true")
+            matchingFallbacks += listOf("debug")
+        }
     }
 
     compileOptions {
@@ -63,6 +71,7 @@ android {
     }
     buildFeatures {
         compose = true
+        buildConfig = true
     }
     packaging {
         resources {

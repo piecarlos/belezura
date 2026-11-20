@@ -2,10 +2,12 @@ package com.salu.calendario
 
 object ProAccessConfig {
     /**
-     * Flag de teste local para simular acesso PRO.
-     * Inicia como false para validar o bloqueio transparente das molduras PRO.
+     * Flag de teste local para simular acesso PRO manualmente.
      */
-    var isProUnlocked: Boolean = false
+    var isProUnlockedManual: Boolean = false
+
+    val isProUnlocked: Boolean
+        get() = isProUnlockedManual || BuildConfig.PRO_GOD_MODE
 
     fun canUseTheme(theme: ThemeItem): Boolean {
         return !theme.isPro || isProUnlocked

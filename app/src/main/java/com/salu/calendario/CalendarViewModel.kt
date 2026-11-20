@@ -591,7 +591,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
 
     // Theme & Logo operations (Phase A)
     fun selectTheme(theme: ThemeItem) {
-        if (theme.isPro && !ProAccessConfig.isProUnlocked) {
+        if (theme.isPro && !ProAccessConfig.canUseTheme(theme)) {
             _uiState.update { it.copy(proPreviewTheme = theme) }
             return
         }
