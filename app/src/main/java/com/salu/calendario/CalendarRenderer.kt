@@ -315,8 +315,24 @@ object CalendarRenderer {
         val cBottom = cardBounds.bottom
 
         val accentColor = layoutConfig.cardAccentColor
-        val bandBgColor = computeWeekdayBandColor(accentColor)
+        val isBlackFriday = layoutConfig.selectedThemeId == "black_friday_luxo" || layoutConfig.selectedThemeId == "black_friday_glam"
+
+        val bandBgColor = if (isBlackFriday) {
+            Color.parseColor("#1E1B18")
+        } else {
+            computeWeekdayBandColor(accentColor)
+        }
         val textMonthColor = layoutConfig.monthColor
+        val weekdayTextColor = if (isBlackFriday) {
+            Color.parseColor("#F5D77A")
+        } else {
+            textMonthColor
+        }
+        val dayNumColor = if (isBlackFriday) {
+            Color.parseColor("#7A5A12")
+        } else {
+            textMonthColor
+        }
 
         // 1. Shadow around the card
         fillPaint.reset()
@@ -350,7 +366,7 @@ object CalendarRenderer {
         textPaint.isSubpixelText = true
         textPaint.typeface = headerTypeface
         textPaint.textAlign = Paint.Align.CENTER
-        textPaint.color = textMonthColor
+        textPaint.color = weekdayTextColor
         textPaint.textSize = 46f * layoutConfig.cardScale
 
         val fontMetrics = textPaint.fontMetrics
@@ -390,7 +406,7 @@ object CalendarRenderer {
         val dayNumTextSize = (if (rowCount <= 5) 36f else 32f) * layoutConfig.cardScale
         val numPaint = Paint(Paint.ANTI_ALIAS_FLAG or Paint.SUBPIXEL_TEXT_FLAG).apply {
             typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
-            color = textMonthColor
+            color = dayNumColor
             textSize = dayNumTextSize
             textAlign = Paint.Align.LEFT
         }
