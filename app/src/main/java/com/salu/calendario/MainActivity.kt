@@ -81,6 +81,8 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
     var showLogoSettingsDialog by rememberSaveable { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestoreConfirmDialog by rememberSaveable { mutableStateOf(false) }
+    var clientDetailTarget by remember { mutableStateOf<ClientDetailTarget?>(null) }
+    var whatsAppTargetFromDetail by remember { mutableStateOf<Pair<ClientDetailTarget, AppointmentDetail>?>(null) }
 
     // SAF Launchers
     val exportBackupLauncher = rememberLauncherForActivityResult(
@@ -186,6 +188,11 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     },
                     onApplySeasonalPromo = { campaign ->
                         viewModel.applySeasonalPromoPreset(campaign)
+                    },
+                    onToggleHideFinanceValues = { viewModel.toggleHideFinanceValues() },
+                    onUpdateStudioFinanceConfig = { cfg -> viewModel.updateStudioFinanceConfig(cfg) },
+                    onOpenClientDetail = { name, day, month, year ->
+                        clientDetailTarget = ClientDetailTarget(name, day, month, year)
                     }
                 )
             }
@@ -280,13 +287,65 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
         CellEditBottomSheet(
             cell = cell,
             yearMonth = uiState.currentYearMonth,
+            appointmentDetails = uiState.appointmentDetails,
+            studioFinanceConfig = uiState.studioFinanceConfig,
             onDismiss = { viewModel.closeCellEditor() },
             onToggleRedX = { viewModel.toggleRedX(cell.slotIndex, it) },
             onAddName = { viewModel.addNameToCell(cell.slotIndex, it) },
             onRemoveName = { viewModel.removeNameFromCell(cell.slotIndex, it) },
             onMoveUp = { viewModel.moveNameUp(cell.slotIndex, it) },
             onMoveDown = { viewModel.moveNameDown(cell.slotIndex, it) },
-            onCheckDuplicateName = { viewModel.findDuplicateClient(it, uiState.currentYearMonth) }
+            onCheckDuplicateName = { viewModel.findDuplicateClient(it, uiState.currentYearMonth) },
+            onOpenClientDetail = { name ->
+                cell.dayNumber?.let { day ->
+                    clientDetailTarget = ClientDetailTarget(
+                        name = name,
+                        day = day,
+                        month = uiState.currentYearMonth.monthValue,
+                        year = uiState.currentYearMonth.year
+                    )
+                }
+            },
+            onUpdateStudioFinanceConfig = { cfg -> viewModel.updateStudioFinanceConfig(cfg) }
+        )
+    }
+
+    // Modal BottomSheet for Client Detail
+    clientDetailTarget?.let { target ->
+        val initialDetail = viewModel.getAppointmentDetail(target.year, target.month, target.day, target.name)
+        ClientDetailSheet(
+            clientName = target.name,
+            day = target.day,
+            month = target.month,
+            year = target.year,
+            initialDetail = initialDetail,
+            studioFinanceConfig = uiState.studioFinanceConfig,
+            onSave = { detail ->
+                viewModel.saveAppointmentDetail(target.year, target.month, target.day, target.name, detail)
+                clientDetailTarget = null
+            },
+            onSaveAndNotifyWhatsApp = { detail ->
+                viewModel.saveAppointmentDetail(target.year, target.month, target.day, target.name, detail)
+                clientDetailTarget = null
+                whatsAppTargetFromDetail = Pair(target, detail)
+            },
+            onDismiss = { clientDetailTarget = null }
+        )
+    }
+
+    // Modal WhatsApp from Client Detail Save & Notify
+    whatsAppTargetFromDetail?.let { (target, detail) ->
+        WhatsAppMessageDialog(
+            clientName = target.name,
+            day = target.day,
+            month = target.month,
+            year = target.year,
+            detail = detail,
+            financeConfig = uiState.studioFinanceConfig,
+            onUpdatePixKey = { key, holder ->
+                viewModel.updateStudioFinanceConfig(uiState.studioFinanceConfig.copy(pixKey = key, pixHolderName = holder))
+            },
+            onDismiss = { whatsAppTargetFromDetail = null }
         )
     }
 
@@ -381,3 +440,5 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
         )
     }
 }
+
+data class ClientDetailTarget(val name: String, val day: Int, val month: Int, val year: Int)

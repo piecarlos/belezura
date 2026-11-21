@@ -2,6 +2,7 @@ package com.salu.calendario
 
 import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -41,6 +42,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
@@ -52,13 +54,19 @@ fun WhatsAppMessageDialog(
     day: Int,
     month: Int,
     year: Int,
+    detail: AppointmentDetail? = null,
+    financeConfig: StudioFinanceConfig? = null,
+    onUpdatePixKey: ((String, String) -> Unit)? = null,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
 
     var selectedTemplate by remember { mutableStateOf(WhatsAppTemplateType.CONFIRMACAO) }
-    var messageText by remember(selectedTemplate, clientName, day, month, year) {
-        mutableStateOf(WhatsAppHelper.buildClientMessage(clientName, day, month, year, selectedTemplate))
+    var currentFinanceConfig by remember(financeConfig) { mutableStateOf(financeConfig ?: StudioFinanceConfig()) }
+    var showPixKeyDialog by remember { mutableStateOf(false) }
+
+    var messageText by remember(selectedTemplate, clientName, day, month, year, detail, currentFinanceConfig) {
+        mutableStateOf(WhatsAppHelper.buildClientMessage(clientName, day, month, year, selectedTemplate, detail, currentFinanceConfig))
     }
 
     val formattedDate = remember(day, month, year) {
@@ -98,8 +106,9 @@ fun WhatsAppMessageDialog(
                         fontWeight = FontWeight.Bold,
                         color = Color(0xFF5E2326)
                     )
+                    val phoneSuffix = if (!detail?.phone.isNullOrBlank()) " • ${detail?.phone}" else ""
                     Text(
-                        text = "${clientName.trim()} • $formattedDate",
+                        text = "${clientName.trim()} • $formattedDate$phoneSuffix",
                         fontSize = 12.sp,
                         color = Color(0xFF8C5A60),
                         fontWeight = FontWeight.Medium
@@ -118,7 +127,7 @@ fun WhatsAppMessageDialog(
                 }
             }
 
-            // Template Selector Chips (Confirmar | Lembrete | Pós-atendimento)
+            // Template Selector Chips (Confirmar | Resumo + Pix | Lembrete | Pós-atendimento)
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(6.dp)
@@ -128,11 +137,11 @@ fun WhatsAppMessageDialog(
                     Surface(
                         onClick = {
                             selectedTemplate = template
-                            messageText = WhatsAppHelper.buildClientMessage(clientName, day, month, year, template)
+                            messageText = WhatsAppHelper.buildClientMessage(clientName, day, month, year, template, detail, currentFinanceConfig)
                         },
                         modifier = Modifier
                             .weight(1f)
-                            .height(36.dp),
+                            .height(38.dp),
                         shape = RoundedCornerShape(8.dp),
                         color = if (isSelected) Color(0xFFB82B62) else Color.White,
                         border = BorderStroke(
@@ -140,19 +149,63 @@ fun WhatsAppMessageDialog(
                             color = if (isSelected) Color(0xFFB82B62) else Color(0xFFF3C7D4)
                         )
                     ) {
-                        Box(
+                        Row(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .padding(horizontal = 4.dp),
-                            contentAlignment = Alignment.Center
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Center
                         ) {
+                            if (template == WhatsAppTemplateType.RESUMO_PIX) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_pix),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(13.dp),
+                                    tint = if (isSelected) Color.White else Color(0xFF00BDAE)
+                                )
+                                Spacer(Modifier.width(3.dp))
+                            }
                             Text(
                                 text = template.label,
                                 fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Medium,
-                                fontSize = 11.5.sp,
+                                fontSize = 10.5.sp,
                                 maxLines = 1,
                                 color = if (isSelected) Color.White else Color(0xFF5E2326),
                                 textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (selectedTemplate == WhatsAppTemplateType.RESUMO_PIX && currentFinanceConfig.pixKey.isBlank()) {
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    color = Color(0xFFFFF8E1),
+                    border = BorderStroke(1.dp, Color(0xFFFFE082))
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 10.dp, vertical = 6.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Text(
+                            text = "💡 Chave Pix não configurada.",
+                            fontSize = 11.5.sp,
+                            color = Color(0xFF7F4B00)
+                        )
+                        if (onUpdatePixKey != null) {
+                            Text(
+                                text = "Cadastrar Chave",
+                                fontSize = 11.5.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFFB82B62),
+                                modifier = Modifier
+                                    .clickable { showPixKeyDialog = true }
+                                    .padding(4.dp)
                             )
                         }
                     }
@@ -208,7 +261,7 @@ fun WhatsAppMessageDialog(
                 // Enviar no WhatsApp
                 Button(
                     onClick = {
-                        WhatsAppHelper.openWhatsAppWithText(context, messageText)
+                        WhatsAppHelper.openWhatsApp(context, messageText, detail?.phone)
                         onDismiss()
                     },
                     modifier = Modifier
@@ -222,9 +275,10 @@ fun WhatsAppMessageDialog(
                     contentPadding = PaddingValues(horizontal = 8.dp)
                 ) {
                     Icon(
-                        Icons.AutoMirrored.Filled.Chat,
+                        painter = painterResource(R.drawable.ic_whatsapp),
                         contentDescription = null,
-                        modifier = Modifier.size(18.dp)
+                        modifier = Modifier.size(19.dp),
+                        tint = Color.White
                     )
                     Spacer(Modifier.width(6.dp))
                     Text("Enviar WhatsApp", fontWeight = FontWeight.Bold, fontSize = 13.sp)
@@ -233,4 +287,125 @@ fun WhatsAppMessageDialog(
         }
     }
 }
+
+    if (showPixKeyDialog && onUpdatePixKey != null) {
+        PixKeyDialog(
+            initialKey = currentFinanceConfig.pixKey,
+            initialHolder = currentFinanceConfig.pixHolderName,
+            onDismiss = { showPixKeyDialog = false },
+            onConfirm = { key, holder ->
+                showPixKeyDialog = false
+                currentFinanceConfig = currentFinanceConfig.copy(pixKey = key, pixHolderName = holder)
+                onUpdatePixKey(key, holder)
+            }
+        )
+    }
+}
+
+@Composable
+fun PixKeyDialog(
+    initialKey: String,
+    initialHolder: String,
+    onDismiss: () -> Unit,
+    onConfirm: (String, String) -> Unit
+) {
+    var keyText by remember { mutableStateOf(initialKey) }
+    var holderText by remember { mutableStateOf(initialHolder) }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(usePlatformDefaultWidth = false)
+    ) {
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth(0.88f)
+                .padding(vertical = 16.dp)
+                .imePadding(),
+            shape = RoundedCornerShape(20.dp),
+            color = Color(0xFFFFFDFD),
+            tonalElevation = 6.dp,
+            shadowElevation = 8.dp
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(20.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Icon(
+                        painter = painterResource(R.drawable.ic_pix),
+                        contentDescription = null,
+                        modifier = Modifier.size(20.dp),
+                        tint = Color(0xFF00BDAE)
+                    )
+                    Text(
+                        text = "Chave Pix do Studio",
+                        fontSize = 17.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = Color(0xFF5E2326)
+                    )
+                }
+
+                Text(
+                    text = "Essa chave será usada automaticamente no modelo de mensagem 'Resumo + Pix'.",
+                    fontSize = 12.sp,
+                    color = Color.Gray,
+                    lineHeight = 16.sp
+                )
+
+                OutlinedTextField(
+                    value = keyText,
+                    onValueChange = { keyText = it },
+                    label = { Text("Chave Pix (CPF, Celular, E-mail ou Aleatória)", fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFB82B62),
+                        focusedLabelColor = Color(0xFFB82B62)
+                    )
+                )
+
+                OutlinedTextField(
+                    value = holderText,
+                    onValueChange = { holderText = it },
+                    label = { Text("Nome do Titular (opcional)", fontSize = 12.sp) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(10.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = Color(0xFFB82B62),
+                        focusedLabelColor = Color(0xFFB82B62)
+                    )
+                )
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(10.dp)
+                    ) {
+                        Text("Cancelar", color = Color.Gray)
+                    }
+
+                    Button(
+                        onClick = { onConfirm(keyText.trim(), holderText.trim()) },
+                        modifier = Modifier.weight(1f).height(46.dp),
+                        shape = RoundedCornerShape(10.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62))
+                    ) {
+                        Text("Salvar Chave", fontWeight = FontWeight.Bold, color = Color.White)
+                    }
+                }
+            }
+        }
+    }
 }

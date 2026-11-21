@@ -75,6 +75,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -99,7 +100,10 @@ fun HomeScreen(
     onOpenThemeGallery: (ThemeCategory) -> Unit = {},
     onOpenLogoSettings: () -> Unit = {},
     onOpenPromotions: () -> Unit = {},
-    onApplySeasonalPromo: (SeasonalCampaign) -> Unit = {}
+    onApplySeasonalPromo: (SeasonalCampaign) -> Unit = {},
+    onToggleHideFinanceValues: () -> Unit = {},
+    onUpdateStudioFinanceConfig: (StudioFinanceConfig) -> Unit = {},
+    onOpenClientDetail: (String, Int, Int, Int) -> Unit = { _, _, _, _ -> }
 ) {
     val context = LocalContext.current
     val focusManager = LocalFocusManager.current
@@ -107,6 +111,7 @@ fun HomeScreen(
 
     var showBackupMenu by rememberSaveable { mutableStateOf(false) }
     var whatsAppTargetResult by remember { mutableStateOf<ClientSearchResult?>(null) }
+    var showPixConfigDialog by remember { mutableStateOf(false) }
 
     // Active month summary calculation
     val activeYm = uiState.currentYearMonth
@@ -509,6 +514,185 @@ fun HomeScreen(
                 }
             }
 
+            // 4.5 Meu Caixa Hub Card
+            val financeSummary = uiState.monthlyFinanceSummary
+            val hideValues = uiState.hideFinanceValues
+            val monthNameCapitalized = CalendarEngine.getMonthDisplayName(activeYm)
+                .lowercase()
+                .replaceFirstChar { it.titlecase(Locale("pt", "BR")) }
+
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7F9)),
+                shape = RoundedCornerShape(16.dp),
+                border = BorderStroke(1.dp, Color(0xFFF7D9E3))
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                ) {
+                    // Header: Title + Eye Toggle + Pix Button
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Text(
+                                text = "Meu Caixa • $monthNameCapitalized",
+                                fontSize = 15.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = Color(0xFF5E2326)
+                            )
+                            IconButton(
+                                onClick = onToggleHideFinanceValues,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(
+                                        if (hideValues) R.drawable.ic_visibility_off else R.drawable.ic_visibility
+                                    ),
+                                    contentDescription = if (hideValues) "Mostrar valores" else "Ocultar valores",
+                                    tint = Color(0xFF8C5A60),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
+                        }
+
+                        // Pix Key Shortcut Pill
+                        val hasPix = uiState.studioFinanceConfig.pixKey.isNotBlank()
+                        Surface(
+                            onClick = { showPixConfigDialog = true },
+                            shape = RoundedCornerShape(14.dp),
+                            color = if (hasPix) Color(0xFFE0F2F1) else Color(0xFFFFF3E0),
+                            border = BorderStroke(1.dp, if (hasPix) Color(0xFF80CBC4) else Color(0xFFFFCC80))
+                        ) {
+                            Row(
+                                modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            ) {
+                                Icon(
+                                    painter = painterResource(R.drawable.ic_pix),
+                                    contentDescription = null,
+                                    modifier = Modifier.size(12.dp),
+                                    tint = if (hasPix) Color(0xFF00796B) else Color(0xFFE65100)
+                                )
+                                Text(
+                                    text = if (hasPix) "Pix OK" else "+ Chave Pix",
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (hasPix) Color(0xFF00796B) else Color(0xFFE65100)
+                                )
+                            }
+                        }
+                    }
+
+                    // Main Metric Cards
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        // Total Previsto
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color.White,
+                            border = BorderStroke(1.dp, Color(0xFFF0E0E5))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "Total Previsto",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF8C5A60),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.totalExpectedCents),
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF5E2326)
+                                )
+                            }
+                        }
+
+                        // Recebido (Sinais + Quitado)
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFF1F8E9),
+                            border = BorderStroke(1.dp, Color(0xFFDCEDC8))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "Recebido",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFF33691E),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.receivedCents),
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFF2E7D32)
+                                )
+                            }
+                        }
+
+                        // A Receber
+                        Surface(
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(12.dp),
+                            color = Color(0xFFFFF8E1),
+                            border = BorderStroke(1.dp, Color(0xFFFFECB3))
+                        ) {
+                            Column(modifier = Modifier.padding(10.dp)) {
+                                Text(
+                                    text = "A Receber",
+                                    fontSize = 11.sp,
+                                    color = Color(0xFFF57F17),
+                                    fontWeight = FontWeight.Medium
+                                )
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.pendingCents),
+                                    fontSize = 14.5.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = Color(0xFFB82B62)
+                                )
+                            }
+                        }
+                    }
+
+                    // Secondary info: Total de agendamentos & Ticket médio
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${financeSummary.totalCount} atendimento${if (financeSummary.totalCount == 1) "" else "s"} (${financeSummary.pricedCount} com valor)",
+                            fontSize = 11.5.sp,
+                            color = Color(0xFF8C5A60),
+                            fontWeight = FontWeight.Medium
+                        )
+                        Text(
+                            text = "Ticket Médio: " + if (hideValues) "••••" else formatBrl(financeSummary.averageTicketCents),
+                            fontSize = 11.5.sp,
+                            color = Color(0xFF8C5A60),
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                }
+            }
+
             // 5. Client Search Box
             Card(
                 modifier = Modifier.fillMaxWidth(),
@@ -574,33 +758,65 @@ fun HomeScreen(
                                     val monthName = CalendarEngine.getMonthDisplayName(result.yearMonth)
                                         .lowercase()
                                         .replaceFirstChar { it.titlecase(Locale("pt", "BR")) }
+                                    val countForClient = uiState.searchResults.count { ClientNameHelper.isDuplicate(it.name, result.name) }
+                                    val detail = uiState.appointmentDetails[appointmentKey(result.yearMonth.year, result.yearMonth.monthValue, result.day, result.name)]
+                                    val detailTag = listOfNotNull(
+                                        detail?.service.takeIf { !it.isNullOrBlank() },
+                                        if (detail != null && detail.priceCents > 0L) (if (uiState.hideFinanceValues) "••••••" else formatBrl(detail.priceCents)) else null
+                                    ).joinToString(" • ")
 
                                     Row(
                                         modifier = Modifier
                                             .fillMaxWidth()
                                             .clip(RoundedCornerShape(8.dp))
                                             .background(Color.White)
-                                            .padding(start = 12.dp, top = 6.dp, bottom = 6.dp, end = 6.dp),
+                                            .clickable { onOpenClientDetail(result.name, result.day, result.yearMonth.monthValue, result.yearMonth.year) }
+                                            .padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 6.dp),
                                         verticalAlignment = Alignment.CenterVertically,
                                         horizontalArrangement = Arrangement.SpaceBetween
                                     ) {
                                         Column(
-                                            modifier = Modifier
-                                                .weight(1f)
-                                                .clickable { onOpenDayFromSearch(result) }
+                                            modifier = Modifier.weight(1f)
                                         ) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
+                                                Text(
+                                                    text = result.name,
+                                                    fontWeight = FontWeight.Bold,
+                                                    fontSize = 14.sp,
+                                                    color = Color(0xFF1A1A1A)
+                                                )
+                                                if (detail?.status != null) {
+                                                    Surface(
+                                                        shape = RoundedCornerShape(4.dp),
+                                                        color = Color(0xFFF0EBF4)
+                                                    ) {
+                                                        Text(
+                                                            text = detail.status.label,
+                                                            fontSize = 10.sp,
+                                                            color = Color(0xFF5E2326),
+                                                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
                                             Text(
-                                                text = result.name,
-                                                fontWeight = FontWeight.Bold,
-                                                fontSize = 14.sp,
-                                                color = Color(0xFF1A1A1A)
-                                            )
-                                            Text(
-                                                text = "${result.day} de $monthName ${result.yearMonth.year}",
+                                                text = "${result.day} de $monthName ${result.yearMonth.year} • $countForClient atendimento${if (countForClient == 1) "" else "s"}",
                                                 fontSize = 12.sp,
                                                 color = Color(0xFFB82B62),
                                                 fontWeight = FontWeight.Medium
                                             )
+                                            if (detailTag.isNotBlank()) {
+                                                Text(
+                                                    text = detailTag,
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF5E2326),
+                                                    fontWeight = FontWeight.SemiBold,
+                                                    modifier = Modifier.padding(top = 2.dp)
+                                                )
+                                            }
                                         }
 
                                         IconButton(
@@ -608,10 +824,10 @@ fun HomeScreen(
                                             modifier = Modifier.size(36.dp)
                                         ) {
                                             Icon(
-                                                Icons.AutoMirrored.Filled.Chat,
+                                                painter = painterResource(R.drawable.ic_whatsapp),
                                                 contentDescription = "Avisar no WhatsApp",
                                                 tint = Color(0xFF25D366),
-                                                modifier = Modifier.size(19.dp)
+                                                modifier = Modifier.size(20.dp)
                                             )
                                         }
                                     }
@@ -779,12 +995,32 @@ fun HomeScreen(
 
     // Modal WhatsApp Message Dialog (from Search Results)
     whatsAppTargetResult?.let { result ->
+        val detail = uiState.appointmentDetails[appointmentKey(result.yearMonth.year, result.yearMonth.monthValue, result.day, result.name)]
         WhatsAppMessageDialog(
             clientName = result.name,
             day = result.day,
             month = result.yearMonth.monthValue,
             year = result.yearMonth.year,
+            detail = detail,
+            financeConfig = uiState.studioFinanceConfig,
+            onUpdatePixKey = { key, holder ->
+                val updated = uiState.studioFinanceConfig.copy(pixKey = key, pixHolderName = holder)
+                onUpdateStudioFinanceConfig(updated)
+            },
             onDismiss = { whatsAppTargetResult = null }
+        )
+    }
+
+    if (showPixConfigDialog) {
+        PixKeyDialog(
+            initialKey = uiState.studioFinanceConfig.pixKey,
+            initialHolder = uiState.studioFinanceConfig.pixHolderName,
+            onDismiss = { showPixConfigDialog = false },
+            onConfirm = { key, holder ->
+                showPixConfigDialog = false
+                val updated = uiState.studioFinanceConfig.copy(pixKey = key, pixHolderName = holder)
+                onUpdateStudioFinanceConfig(updated)
+            }
         )
     }
 }

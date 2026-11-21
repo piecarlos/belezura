@@ -86,6 +86,43 @@ class WhatsAppHelperTest {
             msg
         }
 
-        assertEquals(3, messages.distinct().size)
+        assertEquals(4, messages.distinct().size)
+    }
+
+    @Test
+    fun testBuildResumoPixMessage() {
+        val detail = AppointmentDetail(
+            service = "Maquiagem Social",
+            priceCents = 15000L,
+            depositCents = 5000L,
+            time = "14:30",
+            phone = "11988887777",
+            paymentMethod = PaymentMethod.PIX,
+            status = AppointmentStatus.CONFIRMED
+        )
+        val finance = StudioFinanceConfig(
+            pixKey = "11988887777",
+            pixHolderName = "Jessica Salú",
+            hideFinanceValues = false
+        )
+
+        val msg = WhatsAppHelper.buildClientMessage(
+            clientName = "Amanda",
+            day = 12,
+            month = 12,
+            year = 2026,
+            template = WhatsAppTemplateType.RESUMO_PIX,
+            detail = detail,
+            financeConfig = finance
+        )
+
+        assertTrue(msg.contains("*Amanda*"))
+        assertTrue(msg.contains("14:30"))
+        assertTrue(msg.contains("Maquiagem Social"))
+        assertTrue(msg.contains("R$ 150,00"))
+        assertTrue(msg.contains("R$ 50,00"))
+        assertTrue(msg.contains("R$ 100,00"))
+        assertTrue(msg.contains("`11988887777`"))
+        assertTrue(msg.contains("(Jessica Salú)"))
     }
 }

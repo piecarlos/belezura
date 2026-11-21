@@ -6,12 +6,14 @@ import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
+import android.net.Uri
 import java.time.DayOfWeek
 import java.time.LocalDate
 import java.util.Locale
 
 enum class WhatsAppTemplateType(val label: String) {
     CONFIRMACAO("Confirmar"),
+    RESUMO_PIX("Resumo + Pix"),
     LEMBRETE("Lembrete"),
     POS_ATENDIMENTO("Pós-atendimento")
 }
@@ -42,21 +44,69 @@ object WhatsAppHelper {
         day: Int,
         month: Int,
         year: Int,
-        template: WhatsAppTemplateType
+        template: WhatsAppTemplateType,
+        detail: AppointmentDetail? = null,
+        financeConfig: StudioFinanceConfig? = null
     ): String {
         val formattedDate = formatClientDate(day, month, year)
         val cleanName = clientName.trim()
+        val timeStr = if (!detail?.time.isNullOrBlank()) " às ${detail?.time}" else ""
+        val serviceStr = if (!detail?.service.isNullOrBlank()) " para ${detail?.service}" else ""
 
         return when (template) {
             WhatsAppTemplateType.CONFIRMACAO -> {
+                val detailLine = if (timeStr.isNotEmpty() || serviceStr.isNotEmpty()) {
+                    "Passando para confirmar o seu agendamento no dia $formattedDate$timeStr$serviceStr.\n"
+                } else {
+                    "Passando para confirmar o seu agendamento no dia $formattedDate.\n"
+                }
                 "Olá, $cleanName! Tudo bem? ✨\n\n" +
-                    "Passando para confirmar o seu agendamento no dia $formattedDate.\n" +
+                    detailLine +
                     "Poderia me confirmar se o horário segue certinho para você?\n\n" +
                     "Qualquer dúvida ou ajuste, me avise por aqui! 💖"
             }
+            WhatsAppTemplateType.RESUMO_PIX -> {
+                val time = if (!detail?.time.isNullOrBlank()) detail?.time else "A combinar"
+                val service = if (!detail?.service.isNullOrBlank()) detail?.service else "Atendimento"
+                val price = if (detail != null && detail.priceCents > 0L) formatBrl(detail.priceCents) else "A combinar"
+                val deposit = if (detail != null && detail.depositCents > 0L) formatBrl(detail.depositCents) else null
+                val remaining = if (detail != null && detail.priceCents > 0L) formatBrl(detail.remainingCents) else null
+                val paymentMethod = detail?.paymentMethod?.label ?: "Pix"
+
+                val sb = StringBuilder()
+                sb.append("✨ *Resumo do seu Atendimento* ✨\n")
+                sb.append("Olá, *$cleanName*! Aqui estão os detalhes:\n\n")
+                sb.append("📅 *Data:* $formattedDate\n")
+                sb.append("⏰ *Horário:* $time\n")
+                sb.append("💅 *Procedimento:* $service\n")
+                sb.append("💰 *Valor:* $price\n")
+                if (deposit != null) {
+                    sb.append("💳 *Sinal:* $deposit\n")
+                }
+                if (remaining != null && detail != null && detail.depositCents > 0L) {
+                    sb.append("💵 *Restante:* $remaining no dia ($paymentMethod)\n")
+                }
+
+                if (!financeConfig?.pixKey.isNullOrBlank()) {
+                    sb.append("\n🔑 *Chave Pix para confirmação:*\n")
+                    sb.append("`${financeConfig?.pixKey}`")
+                    if (!financeConfig?.pixHolderName.isNullOrBlank()) {
+                        sb.append(" (${financeConfig.pixHolderName})")
+                    }
+                    sb.append("\n")
+                }
+
+                sb.append("\nQualquer dúvida estou à disposição! 💖")
+                sb.toString()
+            }
             WhatsAppTemplateType.LEMBRETE -> {
+                val detailLine = if (timeStr.isNotEmpty() || serviceStr.isNotEmpty()) {
+                    "Passando para lembrar do seu atendimento marcado para $formattedDate$timeStr$serviceStr.\n"
+                } else {
+                    "Passando para lembrar do seu atendimento marcado para $formattedDate.\n"
+                }
                 "Oi, $cleanName! Tudo certinho? 🌸\n\n" +
-                    "Passando para lembrar do seu atendimento marcado para $formattedDate.\n" +
+                    detailLine +
                     "Já estou preparando tudo com muito carinho para receber você!\n\n" +
                     "Até logo! ✨"
             }
@@ -66,6 +116,39 @@ object WhatsAppHelper {
                     "Espero que tenha amado o resultado. Se precisar de qualquer cuidado ou retoque, estou à disposição! 💖"
             }
         }
+    }
+
+    fun openWhatsApp(context: Context, message: String, phone: String? = null): Boolean {
+        val cleanDigits = phone?.filter { it.isDigit() } ?: ""
+        val fullPhone = when {
+            cleanDigits.length in 10..11 -> "55$cleanDigits"
+            cleanDigits.length in 12..13 && cleanDigits.startsWith("55") -> cleanDigits
+            else -> null
+        }
+        if (fullPhone != null) {
+            val url = "https://wa.me/$fullPhone?text=" + java.net.URLEncoder.encode(message, "UTF-8")
+            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url)).apply {
+                if (context !is Activity) addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+            }
+            intent.setPackage("com.whatsapp")
+            try {
+                context.startActivity(intent)
+                return true
+            } catch (_: ActivityNotFoundException) {
+                intent.setPackage("com.whatsapp.w4b")
+                try {
+                    context.startActivity(intent)
+                    return true
+                } catch (_: ActivityNotFoundException) {
+                    intent.setPackage(null)
+                    try {
+                        context.startActivity(intent)
+                        return true
+                    } catch (_: Exception) {}
+                }
+            }
+        }
+        return openWhatsAppWithText(context, message)
     }
 
     fun copyToClipboard(context: Context, text: String): Boolean {

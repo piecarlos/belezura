@@ -1,3 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources xmlns:tools="http://schemas.android.com/tools"
-    tools:keep="@font/*,@drawable/bg_base,@drawable/bg_make_glam,@drawable/bg_make_glam_2,@drawable/bg_black_friday_luxo,@drawable/bg_natal_minimal,@drawable/bg_natal_clean,@drawable/bg_natal_2,@drawable/bg_ano_novo_glam,@drawable/bg_carnaval_glam" />
+    tools:keep="@font/*,@drawable/bg_base,@drawable/bg_make_glam,@drawable/bg_make_glam_2,@drawable/bg_black_friday_luxo,@drawable/bg_natal_minimal,@drawable/bg_natal_clean,@drawable/bg_natal_2,@drawable/bg_ano_novo_glam,@drawable/bg_carnaval_glam,@drawable/ic_whatsapp,@drawable/ic_pix,@drawable/ic_instagram,@drawable/ic_visibility,@drawable/ic_visibility_off" />

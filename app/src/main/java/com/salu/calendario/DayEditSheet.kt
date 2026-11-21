@@ -2,6 +2,7 @@ package com.salu.calendario
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -52,6 +53,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardCapitalization
@@ -65,13 +67,17 @@ import java.util.Locale
 fun CellEditBottomSheet(
     cell: CellData,
     yearMonth: YearMonth,
+    appointmentDetails: Map<String, AppointmentDetail> = emptyMap(),
+    studioFinanceConfig: StudioFinanceConfig = StudioFinanceConfig(),
     onDismiss: () -> Unit,
     onToggleRedX: (Boolean) -> Unit,
     onAddName: (String) -> Unit,
     onRemoveName: (Int) -> Unit,
     onMoveUp: (Int) -> Unit,
     onMoveDown: (Int) -> Unit,
-    onCheckDuplicateName: (String) -> ClientSearchResult? = { null }
+    onCheckDuplicateName: (String) -> ClientSearchResult? = { null },
+    onOpenClientDetail: (String) -> Unit = {},
+    onUpdateStudioFinanceConfig: (StudioFinanceConfig) -> Unit = {}
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newNameText by rememberSaveable { mutableStateOf("") }
@@ -273,6 +279,10 @@ fun CellEditBottomSheet(
                             .heightIn(max = 240.dp)
                     ) {
                         itemsIndexed(cell.names) { index, name ->
+                            val dayNum = cell.dayNumber ?: 1
+                            val detail = appointmentDetails[appointmentKey(yearMonth.year, yearMonth.monthValue, dayNum, name)]
+                            val hasDetail = detail != null && (detail.service.isNotBlank() || detail.time.isNotBlank() || detail.priceCents > 0L)
+
                             Row(
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -282,13 +292,76 @@ fun CellEditBottomSheet(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(
-                                    text = name,
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.Medium,
-                                    color = Color(0xFF1A1A1A),
-                                    modifier = Modifier.weight(1f)
-                                )
+                                Column(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .clickable { onOpenClientDetail(name) }
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Text(
+                                            text = name,
+                                            fontSize = 14.sp,
+                                            fontWeight = FontWeight.Medium,
+                                            color = Color(0xFF1A1A1A)
+                                        )
+                                        if (detail?.status != null) {
+                                            Surface(
+                                                shape = RoundedCornerShape(4.dp),
+                                                color = Color.White
+                                            ) {
+                                                Text(
+                                                    text = detail.status.label,
+                                                    fontSize = 9.5.sp,
+                                                    color = Color(0xFF5E2326),
+                                                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 1.dp)
+                                                )
+                                            }
+                                        }
+                                    }
+
+                                    if (hasDetail) {
+                                        Row(
+                                            modifier = Modifier.padding(top = 2.dp),
+                                            horizontalArrangement = Arrangement.spacedBy(6.dp),
+                                            verticalAlignment = Alignment.CenterVertically
+                                        ) {
+                                            if (detail!!.time.isNotBlank()) {
+                                                Text(
+                                                    text = "⏰ ${detail.time}",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF8C5A60),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                            if (detail.service.isNotBlank()) {
+                                                Text(
+                                                    text = "💅 ${detail.service}",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFF8C5A60),
+                                                    fontWeight = FontWeight.Medium
+                                                )
+                                            }
+                                            if (detail.priceCents > 0L) {
+                                                Text(
+                                                    text = "💰 ${formatBrl(detail.priceCents)}",
+                                                    fontSize = 11.sp,
+                                                    color = Color(0xFFB82B62),
+                                                    fontWeight = FontWeight.Bold
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        Text(
+                                            text = "+ Detalhes (horário, serviço, valor)",
+                                            fontSize = 10.5.sp,
+                                            color = Color(0xFFB82B62),
+                                            modifier = Modifier.padding(top = 2.dp)
+                                        )
+                                    }
+                                }
 
                                 Row(verticalAlignment = Alignment.CenterVertically) {
                                     // Avisar no WhatsApp
@@ -297,7 +370,7 @@ fun CellEditBottomSheet(
                                         modifier = Modifier.size(32.dp)
                                     ) {
                                         Icon(
-                                            Icons.AutoMirrored.Filled.Chat,
+                                            painter = painterResource(R.drawable.ic_whatsapp),
                                             contentDescription = "Avisar no WhatsApp",
                                             tint = Color(0xFF25D366),
                                             modifier = Modifier.size(19.dp)
@@ -355,11 +428,17 @@ fun CellEditBottomSheet(
     // Modal WhatsApp Message Dialog
     whatsAppClientName?.let { clientName ->
         cell.dayNumber?.let { day ->
+            val detail = appointmentDetails[appointmentKey(yearMonth.year, yearMonth.monthValue, day, clientName)]
             WhatsAppMessageDialog(
                 clientName = clientName,
                 day = day,
                 month = yearMonth.monthValue,
                 year = yearMonth.year,
+                detail = detail,
+                financeConfig = studioFinanceConfig,
+                onUpdatePixKey = { key, holder ->
+                    onUpdateStudioFinanceConfig(studioFinanceConfig.copy(pixKey = key, pixHolderName = holder))
+                },
                 onDismiss = { whatsAppClientName = null }
             )
         }

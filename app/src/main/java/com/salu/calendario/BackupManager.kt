@@ -10,13 +10,17 @@ object BackupManager {
     data class ParsedBackup(
         val layoutConfigJson: String?,
         val monthsData: Map<String, String>,
-        val promoDraftJson: String? = null
+        val promoDraftJson: String? = null,
+        val appointmentDetailsJson: String? = null,
+        val studioFinanceConfigJson: String? = null
     )
 
     fun createBackupJson(
         layoutConfigJson: String?,
         monthsData: Map<String, String>,
-        promoDraftJson: String? = null
+        promoDraftJson: String? = null,
+        appointmentDetailsJson: String? = null,
+        studioFinanceConfigJson: String? = null
     ): String {
         val root = JSONObject()
         root.put("schemaVersion", SCHEMA_VERSION)
@@ -31,6 +35,18 @@ object BackupManager {
         if (!promoDraftJson.isNullOrBlank()) {
             try {
                 root.put("promoDraft", JSONObject(promoDraftJson))
+            } catch (_: Exception) {}
+        }
+
+        if (!appointmentDetailsJson.isNullOrBlank()) {
+            try {
+                root.put("appointmentDetails", JSONObject(appointmentDetailsJson))
+            } catch (_: Exception) {}
+        }
+
+        if (!studioFinanceConfigJson.isNullOrBlank()) {
+            try {
+                root.put("studioFinanceConfig", JSONObject(studioFinanceConfigJson))
             } catch (_: Exception) {}
         }
 
@@ -60,6 +76,8 @@ object BackupManager {
 
             val layoutConfigJson = root.optJSONObject("layoutConfig")?.toString()
             val promoDraftJson = root.optJSONObject("promoDraft")?.toString()
+            val appointmentDetailsJson = root.optJSONObject("appointmentDetails")?.toString()
+            val studioFinanceConfigJson = root.optJSONObject("studioFinanceConfig")?.toString()
             val monthsObj = root.optJSONObject("months")
                 ?: return Result.failure(IllegalArgumentException("Formato inválido: campo 'months' ausente."))
 
@@ -73,7 +91,7 @@ object BackupManager {
                 }
             }
 
-            Result.success(ParsedBackup(layoutConfigJson, monthsMap, promoDraftJson))
+            Result.success(ParsedBackup(layoutConfigJson, monthsMap, promoDraftJson, appointmentDetailsJson, studioFinanceConfigJson))
         } catch (e: Exception) {
             Result.failure(IllegalArgumentException("Erro ao processar JSON de backup: ${e.message}", e))
         }
@@ -85,6 +103,8 @@ object BackupManager {
             val allEntries = prefs.all
             val layoutJson = allEntries["layout_config"] as? String
             val promoJson = allEntries["promo_draft_json"] as? String
+            val appointmentDetailsJson = allEntries["appointment_details_json"] as? String
+            val studioFinanceConfigJson = allEntries["studio_finance_config_json"] as? String
             val monthsMap = mutableMapOf<String, String>()
             for ((key, value) in allEntries) {
                 if (key.startsWith("month_data_") && value is String) {
@@ -92,7 +112,7 @@ object BackupManager {
                 }
             }
 
-            val backupContent = createBackupJson(layoutJson, monthsMap, promoJson)
+            val backupContent = createBackupJson(layoutJson, monthsMap, promoJson, appointmentDetailsJson, studioFinanceConfigJson)
             context.contentResolver.openOutputStream(uri)?.use { out ->
                 out.write(backupContent.toByteArray(Charsets.UTF_8))
             } ?: return Result.failure(Exception("Não foi possível abrir o arquivo para gravação."))
@@ -116,10 +136,14 @@ object BackupManager {
                     val prefs = context.getSharedPreferences("salu_calendar_prefs", Context.MODE_PRIVATE)
                     val editor = prefs.edit()
 
-                    // Clear existing months, layout & promo
+                    // Clear existing months, layout, promo, appointmentDetails & studioFinanceConfig
                     val existingKeys = prefs.all.keys
                     for (k in existingKeys) {
-                        if (k.startsWith("month_data_") || k == "layout_config" || (backup.promoDraftJson != null && k == "promo_draft_json")) {
+                        if (k.startsWith("month_data_") || k == "layout_config" ||
+                            (backup.promoDraftJson != null && k == "promo_draft_json") ||
+                            (backup.appointmentDetailsJson != null && k == "appointment_details_json") ||
+                            (backup.studioFinanceConfigJson != null && k == "studio_finance_config_json")
+                        ) {
                             editor.remove(k)
                         }
                     }
@@ -129,6 +153,12 @@ object BackupManager {
                     }
                     backup.promoDraftJson?.let {
                         editor.putString("promo_draft_json", it)
+                    }
+                    backup.appointmentDetailsJson?.let {
+                        editor.putString("appointment_details_json", it)
+                    }
+                    backup.studioFinanceConfigJson?.let {
+                        editor.putString("studio_finance_config_json", it)
                     }
                     for ((k, v) in backup.monthsData) {
                         editor.putString(k, v)

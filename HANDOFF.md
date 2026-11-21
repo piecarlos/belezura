@@ -74,21 +74,23 @@ app/src/main/
 ├── AndroidManifest.xml
 ├── java/com/salu/calendario/
 │   ├── MainActivity.kt          # Activity raiz, viewModels, launchers SAF, navegação entre telas e hosts
-│   ├── HomeScreen.kt            # Tela inicial / Hub, card do mês ativo, busca de clientes e atalhos
+│   ├── HomeScreen.kt            # Tela inicial / Hub, Meu Caixa com privacidade, card do mês ativo, busca de clientes e atalhos
 │   ├── EditorScreen.kt          # Tela principal do editor (TopAppBar, preview Canvas 9:16 com gestos multi-touch)
 │   ├── PromoEditorScreen.kt     # Editor interativo de Stories 9:16 (chips de templates, preview e edição de textos)
 │   ├── LayoutAdjustPanel.kt     # Painel "Ajustar Layout e Cores" (abas, sub-abas, sliders, cor e logo)
 │   ├── ThemeGallerySheet.kt     # Galeria de molduras/temas com radar sazonal, miniaturas reais e filtros
 │   ├── LogoSettingsDialog.kt    # Diálogo de configuração, visualização e modos da logomarca
 │   ├── ProPreviewDialog.kt      # Modal de transparência e preview de modelos exclusivos PRO
-│   ├── DayEditSheet.kt          # ModalBottomSheet de edição do dia (nomes + toggle "X" vermelho)
+│   ├── DayEditSheet.kt          # ModalBottomSheet de edição do dia (nomes + tags de detalhes + toggle "X" vermelho)
+│   ├── ClientDetailSheet.kt     # ModalBottomSheet de ficha de atendimento (serviço, horário, WhatsApp, valor, sinal, restante, anotações privadas)
 │   ├── EditorDialogs.kt         # Diálogos auxiliares (MonthYearPicker, confirmação de restauração)
 │   ├── CustomBackgroundDialog.kt# Modal de orientação prévia e seleção de imagem para moldura
-│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), undo/redo, temas, logo, promoções e ações
-│   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview, temas, logo e exportação)
+│   ├── CalendarViewModel.kt     # State holder reativo (StateFlow), finanças, undo/redo, temas, logo, promoções e ações
+│   ├── CalendarRenderer.kt      # Motor gráfico WYSIWYG Canvas 1080×1920 (preview, temas, logo e exportação - NUNCA expõe dados financeiros)
 │   ├── PromoRenderer.kt         # Motor gráfico WYSIWYG Canvas 1080×1920 para Stories de Promoção/Avisos
 │   ├── CalendarEngine.kt        # Cálculos de calendário, deslocamentos, nomes pt-BR e grid
 │   ├── CalendarModels.kt        # Modelos imutáveis (CellData, EditableElement, AppScreen, etc.)
+│   ├── AppointmentModels.kt     # Modelos de finanças e ficha (PaymentMethod, AppointmentStatus, AppointmentDetail, StudioFinanceConfig, MonthlyFinanceSummary)
 │   ├── PromoModels.kt           # Modelos de Stories/Promoções (PromoTemplateType, PromoDraft, presets e JSON)
 │   ├── LayoutConfig.kt          # Configuração geométrica e visual com serialização/deserialização JSON
 │   ├── SeasonalRadar.kt         # Calendário comercial sazonal offline brasileiro (dias restantes e dicas)
@@ -382,6 +384,15 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
     - Helper puro determinístico `isThemeNew(addedDate, nowMillis, windowDays = 30)` usando `java.util.Calendar` (sem `java.time`, compatível com qualquer `minSdk` e seguro contra falhas).
     - Memoização de `nowMillis = remember { System.currentTimeMillis() }` na abertura de `ThemeGallerySheet.kt` e renderização em gradiente arco-íris fluido sobre pílula escura de alto contraste.
   - **Suíte de Testes Automatizados:** `SprintC3Test.kt` e `PromoModelsTest.kt` validando todas as condições de expiração de datas, retrocompatibilidade e tolerância do snap magnético.
+- **Sprint D.1 (Ficha de Atendimento da Cliente + Meu Caixa do Mês com Olhinho + WhatsApp Inteligente com Pix + Ícones Vetoriais Oficiais):**
+  - **Ícones Vetoriais Oficiais:** `ic_whatsapp.xml`, `ic_pix.xml`, `ic_instagram.xml`, `ic_visibility.xml`, `ic_visibility_off.xml` em `res/drawable/` e protegidos pelo R8 em `res/raw/keep.xml`.
+  - **Modelos e Finanças (`AppointmentModels.kt`):** `PaymentMethod` (Pix, Cartão, Dinheiro, Outro), `AppointmentStatus` (Agendado, Confirmado, Concluído, Pago), `AppointmentDetail` (serviço, valor, sinal, restante calculado, horário, telefone, anotações), `StudioFinanceConfig` (chave Pix, titular, olhinho), `ServicePreset` (presets ágeis de beleza) e `calculateMonthlyFinanceSummary`.
+  - **Ficha de Atendimento (`ClientDetailSheet.kt`):** ModalBottomSheet para gestão detalhada de cada agendamento com presets em 1 toque, cálculo dinâmico de restante, notas privadas e botões "Salvar" e "Salvar e Avisar" (WhatsApp).
+  - **Meu Caixa do Mês (`HomeScreen.kt`):** Card elegante no Hub com métricas em tempo real (Total Previsto, Recebido, A Receber, Ticket Médio e Total de Atendimentos), alternador de privacidade "Olhinho" (`ic_visibility`/`ic_visibility_off`) e atalho rápido para cadastrar/editar Chave Pix.
+  - **WhatsApp Inteligente com Pix (`WhatsAppHelper.kt`, `WhatsAppMessageDialog.kt`):** Novo modelo `Resumo + Pix` pré-formatado com detalhes completos do procedimento e chave Pix destacada, abertura direta via link wa.me para números cadastrados e atalho de configuração inline de chave Pix caso esteja vazia.
+  - **Privacidade Sagrada:** `CalendarRenderer.kt` renderiza estritamente os nomes de clientes nas artes exportadas dos Stories. Nenhum dado financeiro ou telefone vaza para a imagem.
+  - **Persistência e Backup (`BackupManager.kt`, `CalendarViewModel.kt`):** Armazenamento seguro de `appointment_details_json` e `studio_finance_config_json` no `SharedPreferences` e round-trip completo com retrocompatibilidade estrita (`opt*`) no backup JSON.
+  - **Testes Unitários:** `AppointmentModelsTest.kt`, `WhatsAppHelperTest.kt` e `BackupManagerTest.kt` cobrindo 100% dos novos fluxos e cálculos.
 - **Suíte de Testes Automatizados:**
   - `WhatsAppHelperTest.kt`: Validação dos 3 templates de mensagem, formatação de dias da semana em pt-BR e higienização de nomes.
   - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.

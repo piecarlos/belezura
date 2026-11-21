@@ -102,6 +102,58 @@ class BackupManagerTest {
     }
 
     @Test
+    fun testBackupWithAppointmentDetailsAndStudioFinanceRoundTrip() {
+        val detail = AppointmentDetail(
+            service = "Noiva",
+            priceCents = 65000L,
+            depositCents = 20000L,
+            time = "10:00",
+            phone = "11988887777",
+            paymentMethod = PaymentMethod.PIX,
+            status = AppointmentStatus.CONFIRMED,
+            notes = "Sem cílios postiços"
+        )
+        val detailsJson = JSONObject().apply {
+            put("2026_12_15_maria", detail.toJson())
+        }.toString()
+
+        val finance = StudioFinanceConfig(
+            pixKey = "chave@salu.com",
+            pixHolderName = "Salú Studio",
+            hideFinanceValues = true
+        )
+
+        val backupJson = BackupManager.createBackupJson(
+            layoutConfigJson = LayoutConfig().toJson(),
+            monthsData = emptyMap(),
+            promoDraftJson = null,
+            appointmentDetailsJson = detailsJson,
+            studioFinanceConfigJson = finance.toJson().toString()
+        )
+
+        assertTrue(backupJson.contains("\"appointmentDetails\""))
+        assertTrue(backupJson.contains("\"studioFinanceConfig\""))
+
+        val parsed = BackupManager.validateAndParseBackupJson(backupJson).getOrNull()
+        assertNotNull(parsed)
+        assertNotNull(parsed!!.appointmentDetailsJson)
+        assertNotNull(parsed.studioFinanceConfigJson)
+
+        val restoredDetails = JSONObject(parsed.appointmentDetailsJson!!)
+        val restoredEntry = AppointmentDetail.fromJson(restoredDetails.getJSONObject("2026_12_15_maria"))
+        assertEquals("Noiva", restoredEntry.service)
+        assertEquals(65000L, restoredEntry.priceCents)
+        assertEquals(20000L, restoredEntry.depositCents)
+        assertEquals(45000L, restoredEntry.remainingCents)
+        assertEquals("Sem cílios postiços", restoredEntry.notes)
+
+        val restoredFinance = StudioFinanceConfig.fromJson(JSONObject(parsed.studioFinanceConfigJson!!))
+        assertEquals("chave@salu.com", restoredFinance.pixKey)
+        assertEquals("Salú Studio", restoredFinance.pixHolderName)
+        assertTrue(restoredFinance.hideFinanceValues)
+    }
+
+    @Test
     fun testRejectInvalidOrCorruptedJson() {
         // Empty or null string
         assertTrue(BackupManager.validateAndParseBackupJson("").isFailure)

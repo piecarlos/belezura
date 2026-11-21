@@ -38,7 +38,11 @@ data class CalendarUiState(
     val searchResults: List<ClientSearchResult> = emptyList(),
     val lastBackupTimeFormatted: String? = null,
     val promoDraft: PromoDraft = PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA),
-    val previousVisualSnapshot: VisualSnapshot? = null
+    val previousVisualSnapshot: VisualSnapshot? = null,
+    val appointmentDetails: Map<String, AppointmentDetail> = emptyMap(),
+    val studioFinanceConfig: StudioFinanceConfig = StudioFinanceConfig(),
+    val monthlyFinanceSummary: MonthlyFinanceSummary = MonthlyFinanceSummary(0, 0, 0L, 0L, 0L, 0L),
+    val hideFinanceValues: Boolean = false
 )
 
 object ClientSearchHelper {
@@ -172,6 +176,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
 
         val savedSnapshotJson = prefs.getString("previous_visual_snapshot", null)
         val loadedSnapshot = savedSnapshotJson?.let { VisualSnapshot.fromJson(it) }
+        val savedDetails = loadAppointmentDetails()
+        val savedFinanceConfig = loadStudioFinanceConfig()
+        val initialSummary = computeMonthlyFinanceSummary(initialYm, cells, savedDetails)
 
         _uiState.update {
             it.copy(
@@ -182,7 +189,11 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 hasCustomLogo = hasLogo,
                 lastBackupTimeFormatted = lastBackup,
                 promoDraft = initialPromo,
-                previousVisualSnapshot = loadedSnapshot
+                previousVisualSnapshot = loadedSnapshot,
+                appointmentDetails = savedDetails,
+                studioFinanceConfig = savedFinanceConfig,
+                hideFinanceValues = savedFinanceConfig.hideFinanceValues,
+                monthlyFinanceSummary = initialSummary
             )
         }
         refreshSavedMonthsSummaries()
@@ -202,6 +213,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         if (_uiState.value.currentYearMonth != result.yearMonth) {
             val savedCells = loadMonthCells(result.yearMonth)
             val cells = CalendarEngine.generateCells(result.yearMonth, savedCells)
+            val summary = computeMonthlyFinanceSummary(result.yearMonth, cells, _uiState.value.appointmentDetails)
             undoStack.clear()
             redoStack.clear()
             val targetCell = cells.firstOrNull { it.slotIndex == result.slotIndex || it.dayNumber == result.day }
@@ -212,7 +224,8 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                     currentScreen = AppScreen.CALENDAR,
                     editingCell = targetCell,
                     canUndo = false,
-                    canRedo = false
+                    canRedo = false,
+                    monthlyFinanceSummary = summary
                 )
             }
         } else {
@@ -309,6 +322,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     fun setYearMonth(newYm: YearMonth) {
         val savedCells = loadMonthCells(newYm)
         val cells = CalendarEngine.generateCells(newYm, savedCells)
+        val summary = computeMonthlyFinanceSummary(newYm, cells, _uiState.value.appointmentDetails)
         undoStack.clear()
         redoStack.clear()
         _uiState.update {
@@ -317,7 +331,8 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 cells = cells,
                 editingCell = null,
                 canUndo = false,
-                canRedo = false
+                canRedo = false,
+                monthlyFinanceSummary = summary
             )
         }
     }
@@ -350,12 +365,23 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun removeNameFromCell(slotIndex: Int, index: Int) {
+        val cell = _uiState.value.cells.firstOrNull { it.slotIndex == slotIndex }
+        val removedName = cell?.names?.getOrNull(index)
+        val dayNumber = cell?.dayNumber
         updateCell(slotIndex) {
             val list = it.names.toMutableList()
             if (index in list.indices) {
                 list.removeAt(index)
             }
             it.copy(names = list)
+        }
+        if (removedName != null && dayNumber != null) {
+            val updatedCell = _uiState.value.cells.firstOrNull { it.slotIndex == slotIndex }
+            val hasDuplicateRemaining = updatedCell?.names?.any { ClientNameHelper.isDuplicate(it, removedName) } == true
+            if (!hasDuplicateRemaining) {
+                val ym = _uiState.value.currentYearMonth
+                deleteAppointmentDetail(ym.year, ym.monthValue, dayNumber, removedName)
+            }
         }
     }
 
@@ -407,11 +433,13 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 cell
             }
         }
+        val summary = computeMonthlyFinanceSummary(_uiState.value.currentYearMonth, updatedCells, _uiState.value.appointmentDetails)
         _uiState.update {
             it.copy(
                 cells = updatedCells,
                 canUndo = undoStack.isNotEmpty(),
-                canRedo = false
+                canRedo = false,
+                monthlyFinanceSummary = summary
             )
         }
         saveMonthCells(_uiState.value.currentYearMonth, updatedCells)
@@ -429,12 +457,14 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             prevCells.firstOrNull { it.slotIndex == cur.slotIndex }
         }
 
+        val summary = computeMonthlyFinanceSummary(_uiState.value.currentYearMonth, prevCells, _uiState.value.appointmentDetails)
         _uiState.update {
             it.copy(
                 cells = prevCells,
                 editingCell = updatedEditing,
                 canUndo = undoStack.isNotEmpty(),
-                canRedo = redoStack.isNotEmpty()
+                canRedo = redoStack.isNotEmpty(),
+                monthlyFinanceSummary = summary
             )
         }
         saveMonthCells(_uiState.value.currentYearMonth, prevCells)
@@ -451,12 +481,14 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             nextCells.firstOrNull { it.slotIndex == cur.slotIndex }
         }
 
+        val summary = computeMonthlyFinanceSummary(_uiState.value.currentYearMonth, nextCells, _uiState.value.appointmentDetails)
         _uiState.update {
             it.copy(
                 cells = nextCells,
                 editingCell = updatedEditing,
                 canUndo = undoStack.isNotEmpty(),
-                canRedo = redoStack.isNotEmpty()
+                canRedo = redoStack.isNotEmpty(),
+                monthlyFinanceSummary = summary
             )
         }
         saveMonthCells(_uiState.value.currentYearMonth, nextCells)
@@ -1115,6 +1147,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         } else {
             PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
         }
+        val reloadedDetails = loadAppointmentDetails()
+        val reloadedConfig = loadStudioFinanceConfig()
+        val summary = computeMonthlyFinanceSummary(ym, cells, reloadedDetails)
         undoStack.clear()
         redoStack.clear()
         _uiState.update {
@@ -1124,7 +1159,11 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 editingCell = null,
                 canUndo = false,
                 canRedo = false,
-                promoDraft = reloadedPromo
+                promoDraft = reloadedPromo,
+                appointmentDetails = reloadedDetails,
+                studioFinanceConfig = reloadedConfig,
+                hideFinanceValues = reloadedConfig.hideFinanceValues,
+                monthlyFinanceSummary = summary
             )
         }
         refreshSavedMonthsSummaries()
@@ -1198,5 +1237,123 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
 
     private fun saveLayoutConfig(config: LayoutConfig) {
         prefs.edit().putString("layout_config", config.toJson()).apply()
+    }
+
+    fun saveAppointmentDetail(year: Int, month: Int, day: Int, clientName: String, detail: AppointmentDetail) {
+        val key = appointmentKey(year, month, day, clientName)
+        val updatedMap = _uiState.value.appointmentDetails + (key to detail)
+        val summary = computeMonthlyFinanceSummary(_uiState.value.currentYearMonth, _uiState.value.cells, updatedMap)
+        _uiState.update {
+            it.copy(
+                appointmentDetails = updatedMap,
+                monthlyFinanceSummary = summary
+            )
+        }
+        saveAppointmentDetails(updatedMap)
+    }
+
+    fun deleteAppointmentDetail(year: Int, month: Int, day: Int, clientName: String) {
+        val key = appointmentKey(year, month, day, clientName)
+        if (!_uiState.value.appointmentDetails.containsKey(key)) return
+        val updatedMap = _uiState.value.appointmentDetails - key
+        val summary = computeMonthlyFinanceSummary(_uiState.value.currentYearMonth, _uiState.value.cells, updatedMap)
+        _uiState.update {
+            it.copy(
+                appointmentDetails = updatedMap,
+                monthlyFinanceSummary = summary
+            )
+        }
+        saveAppointmentDetails(updatedMap)
+    }
+
+    fun getAppointmentDetail(year: Int, month: Int, day: Int, clientName: String): AppointmentDetail? {
+        val key = appointmentKey(year, month, day, clientName)
+        return _uiState.value.appointmentDetails[key]
+    }
+
+    fun updateStudioFinanceConfig(config: StudioFinanceConfig) {
+        _uiState.update {
+            it.copy(
+                studioFinanceConfig = config,
+                hideFinanceValues = config.hideFinanceValues
+            )
+        }
+        saveStudioFinanceConfig(config)
+    }
+
+    fun toggleHideFinanceValues() {
+        val currentHide = _uiState.value.hideFinanceValues
+        val newHide = !currentHide
+        val updatedConfig = _uiState.value.studioFinanceConfig.copy(hideFinanceValues = newHide)
+        _uiState.update {
+            it.copy(
+                hideFinanceValues = newHide,
+                studioFinanceConfig = updatedConfig
+            )
+        }
+        saveStudioFinanceConfig(updatedConfig)
+    }
+
+    private fun computeMonthlyFinanceSummary(
+        ym: YearMonth,
+        cells: List<CellData>,
+        details: Map<String, AppointmentDetail>
+    ): MonthlyFinanceSummary {
+        val clientList = mutableListOf<Pair<Int, String>>()
+        for (cell in cells) {
+            val day = cell.dayNumber ?: continue
+            for (name in cell.names) {
+                clientList.add(Pair(day, name))
+            }
+        }
+        return calculateMonthlyFinanceSummary(ym.year, ym.monthValue, clientList, details)
+    }
+
+    private fun loadAppointmentDetails(): Map<String, AppointmentDetail> {
+        val jsonStr = prefs.getString("appointment_details_json", null) ?: return emptyMap()
+        return try {
+            val root = JSONObject(jsonStr)
+            val map = mutableMapOf<String, AppointmentDetail>()
+            val keys = root.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                val obj = root.optJSONObject(key)
+                if (obj != null) {
+                    map[key] = AppointmentDetail.fromJson(obj)
+                }
+            }
+            map
+        } catch (e: Exception) {
+            emptyMap()
+        }
+    }
+
+    private fun saveAppointmentDetails(details: Map<String, AppointmentDetail>) {
+        try {
+            val root = JSONObject()
+            for ((key, detail) in details) {
+                root.put(key, detail.toJson())
+            }
+            prefs.edit().putString("appointment_details_json", root.toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
+    private fun loadStudioFinanceConfig(): StudioFinanceConfig {
+        val jsonStr = prefs.getString("studio_finance_config_json", null) ?: return StudioFinanceConfig()
+        return try {
+            StudioFinanceConfig.fromJson(JSONObject(jsonStr))
+        } catch (_: Exception) {
+            StudioFinanceConfig()
+        }
+    }
+
+    private fun saveStudioFinanceConfig(config: StudioFinanceConfig) {
+        try {
+            prefs.edit().putString("studio_finance_config_json", config.toJson().toString()).apply()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
     }
 }
