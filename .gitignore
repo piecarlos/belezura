@@ -27,3 +27,8 @@ keystore.properties
 RELEASE_GUIDE.md
 Backup_*.json
 modelo.jpg
+
+# Automated Screen Captures
+screenshots_review/
+capture_screens.ps1
+

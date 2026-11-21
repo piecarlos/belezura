@@ -1,6 +1,14 @@
 package com.salu.calendario
 
 import android.graphics.Bitmap
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -59,12 +67,16 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -79,7 +91,9 @@ fun ThemeGallerySheet(
     hasCustomLogo: Boolean,
     subtitle: String = "Escolha o visual do seu calendário",
     initialCategory: ThemeCategory = ThemeCategory.ALL,
+    callerScreen: AppScreen = AppScreen.HOME,
     onSelectTheme: (ThemeItem) -> Unit,
+    onApplyAndNavigateToEditor: ((ThemeItem) -> Unit)? = null,
     onPickCustomBackground: () -> Unit,
     onResetToDefaultBackground: () -> Unit,
     onOpenLogoSettings: () -> Unit,
@@ -87,8 +101,21 @@ fun ThemeGallerySheet(
 ) {
     val context = LocalContext.current
     var selectedCategory by remember(initialCategory) { mutableStateOf(initialCategory) }
+    var pendingThemeId by remember(currentThemeId) { mutableStateOf(currentThemeId) }
     val seasonalHighlight = remember { SeasonalRadar.getActiveCampaign() }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+    val nowMillis = remember { System.currentTimeMillis() }
+
+    val infiniteTransition = rememberInfiniteTransition(label = "novo_rainbow")
+    val novoPhase by infiniteTransition.animateFloat(
+        initialValue = 0f,
+        targetValue = 240f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(durationMillis = 1200, easing = LinearEasing),
+            repeatMode = RepeatMode.Restart
+        ),
+        label = "novo_phase"
+    )
 
     val themes = remember(selectedCategory) {
         ThemeCatalog.getThemesByCategory(selectedCategory)
@@ -104,9 +131,13 @@ fun ThemeGallerySheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .fillMaxHeight(0.88f)
-                .navigationBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
         ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+                    .padding(horizontal = 16.dp, vertical = 12.dp)
+            ) {
             // Top Bar: Title & Close
             Row(
                 modifier = Modifier.fillMaxWidth(),
@@ -294,22 +325,104 @@ fun ThemeGallerySheet(
                 contentPadding = PaddingValues(bottom = 16.dp)
             ) {
                 items(themes, key = { it.id }) { theme ->
-                    val isSelected = (!hasCustomBackground && currentThemeId == theme.id)
+                    val isSelected = (!hasCustomBackground && pendingThemeId == theme.id)
                     ThemeCard(
                         theme = theme,
                         isSelected = isSelected,
-                        onClick = { onSelectTheme(theme) }
+                        isNew = theme.isNew(nowMillis),
+                        novoPhase = novoPhase,
+                        onClick = {
+                            pendingThemeId = theme.id
+                        }
                     )
                 }
             }
         }
+
+        // Fixed bottom bar with explicit confirmation
+        Surface(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding(),
+            color = Color.White,
+            shadowElevation = 8.dp,
+            border = BorderStroke(1.dp, Color(0xFFF3C7D4))
+        ) {
+            val pendingTheme = remember(pendingThemeId) {
+                ThemeCatalog.getThemeById(pendingThemeId)
+            }
+            if (callerScreen == AppScreen.HOME) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    OutlinedButton(
+                        onClick = {
+                            pendingTheme?.let { onSelectTheme(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.5.dp, Color(0xFFB82B62)),
+                        colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFB82B62))
+                    ) {
+                        Text("✓ Aplicar (Home)", fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                    }
+
+                    Button(
+                        onClick = {
+                            pendingTheme?.let {
+                                onApplyAndNavigateToEditor?.invoke(it) ?: onSelectTheme(it)
+                            }
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .weight(1.1f)
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62))
+                    ) {
+                        Text("✓ Ir p/ Calendário", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color.White)
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
+                ) {
+                    Button(
+                        onClick = {
+                            pendingTheme?.let { onSelectTheme(it) }
+                            onDismiss()
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(46.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62))
+                    ) {
+                        Text("✓ Aplicar moldura", fontWeight = FontWeight.Bold, fontSize = 14.sp, color = Color.White)
+                    }
+                }
+            }
+        }
     }
+}
 }
 
 @Composable
 fun ThemeCard(
     theme: ThemeItem,
     isSelected: Boolean,
+    isNew: Boolean = theme.isNew,
+    novoRotation: Float = 0f,
+    novoScale: Float = 1f,
+    novoPhase: Float = 0f,
     onClick: () -> Unit
 ) {
     val accentColor = remember(theme.accentHex) {
@@ -498,11 +611,51 @@ fun ThemeCard(
                 }
             }
 
+            // Rainbow NOVO Badge
+            if (isNew) {
+                val spanPx = 240f
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopStart)
+                        .padding(5.dp)
+                        .clip(RoundedCornerShape(6.dp))
+                        .background(Color(0xDE111115))
+                        .border(BorderStroke(0.5.dp, Color(0x33FFFFFF)), RoundedCornerShape(6.dp))
+                        .padding(horizontal = 6.dp, vertical = 2.dp)
+                ) {
+                    Text(
+                        text = "NOVO",
+                        style = TextStyle(
+                            brush = Brush.linearGradient(
+                                colors = listOf(
+                                    Color(0xFF42C8FF),
+                                    Color(0xFFA77BFF),
+                                    Color(0xFFFF6B9D),
+                                    Color(0xFFFFA86B),
+                                    Color(0xFFFFE76B),
+                                    Color(0xFF5CE89A),
+                                    Color(0xFF42C8FF)
+                                ),
+                                start = Offset(novoPhase, 0f),
+                                end = Offset(novoPhase + spanPx, 0f),
+                                tileMode = TileMode.Repeated
+                            ),
+                            fontWeight = FontWeight.ExtraBold,
+                            fontSize = 10.sp,
+                            letterSpacing = 0.8.sp
+                        ),
+                        fontWeight = FontWeight.ExtraBold,
+                        fontSize = 10.sp,
+                        letterSpacing = 0.8.sp
+                    )
+                }
+            }
+
             // Selected Checkmark Badge
             if (isSelected) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.TopStart)
+                        .align(if (isNew) Alignment.BottomEnd else Alignment.TopStart)
                         .padding(6.dp)
                         .size(20.dp)
                         .clip(CircleShape)

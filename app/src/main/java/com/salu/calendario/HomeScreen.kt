@@ -532,7 +532,7 @@ fun HomeScreen(
                         value = uiState.searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Ex: Jessica, Glória, Milka...", fontSize = 13.sp) },
+                        placeholder = { Text("Ex: Maria, Jessica, Glória...", fontSize = 13.sp) },
                         leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF8C5A60)) },
                         trailingIcon = {
                             if (uiState.searchQuery.isNotEmpty()) {

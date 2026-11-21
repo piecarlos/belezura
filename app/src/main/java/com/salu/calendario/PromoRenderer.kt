@@ -4,6 +4,7 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.graphics.Canvas
 import android.graphics.Color
+import android.graphics.DashPathEffect
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Path
@@ -120,10 +121,14 @@ object PromoRenderer {
 
         // Optional Logo at top
         val logoBitmap = if (promoDraft.showLogo) LogoManager.getLogoBitmap(context) else null
-        if (promoDraft.showLogo && logoBitmap != null) {
+        if (promoDraft.showLogo) {
             val logoRect = getLogoBounds(context, promoDraft)
             if (logoRect != null) {
-                drawPromoLogo(canvas, logoBitmap, logoRect, layoutConfig.logoMode)
+                if (logoBitmap != null) {
+                    drawPromoLogo(canvas, logoBitmap, logoRect, layoutConfig.logoMode)
+                } else {
+                    drawLogoPlaceholder(canvas, logoRect, highlightColor, isDark)
+                }
             }
             cursorY += 115f + 20f
         }
@@ -603,22 +608,61 @@ object PromoRenderer {
 
     fun getLogoBounds(context: Context, promoDraft: PromoDraft): RectF? {
         if (!promoDraft.showLogo) return null
-        val logoBitmap = LogoManager.getLogoBitmap(context) ?: return null
-        val logoAspect = if (logoBitmap.height > 0) logoBitmap.width.toFloat() / logoBitmap.height.toFloat() else 1f
+        val logoBitmap = LogoManager.getLogoBitmap(context)
+        val logoAspect = if (logoBitmap != null && logoBitmap.height > 0) {
+            logoBitmap.width.toFloat() / logoBitmap.height.toFloat()
+        } else {
+            1.6f
+        }
         val cardTop = 180f
         val baseH = 115f
         val baseW = min(360f, baseH * logoAspect)
         val baseCenterY = cardTop + 42f + baseH / 2f
         val baseCenterX = VIRTUAL_WIDTH / 2f
 
-        val scale = promoDraft.logoScale.coerceIn(0.4f, 2.5f)
+        val scale = promoDraft.logoScale.coerceIn(0.3f, 5.0f)
         val scaledW = baseW * scale
         val scaledH = baseH * scale
 
-        val cx = (baseCenterX + promoDraft.logoOffsetX).coerceIn(scaledW / 2f, VIRTUAL_WIDTH - scaledW / 2f)
-        val cy = (baseCenterY + promoDraft.logoOffsetY).coerceIn(scaledH / 2f, VIRTUAL_HEIGHT - scaledH / 2f)
+        val cx = (baseCenterX + promoDraft.logoOffsetX).coerceIn(0f, VIRTUAL_WIDTH)
+        val cy = (baseCenterY + promoDraft.logoOffsetY).coerceIn(0f, VIRTUAL_HEIGHT)
 
         return RectF(cx - scaledW / 2f, cy - scaledH / 2f, cx + scaledW / 2f, cy + scaledH / 2f)
+    }
+
+    private fun drawLogoPlaceholder(
+        canvas: Canvas,
+        bounds: RectF,
+        accentColor: Int,
+        isDark: Boolean
+    ) {
+        val radius = 16f
+        val fillPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.FILL
+            color = if (isDark) {
+                Color.argb(45, 255, 255, 255)
+            } else {
+                Color.argb(25, Color.red(accentColor), Color.green(accentColor), Color.blue(accentColor))
+            }
+        }
+        canvas.drawRoundRect(bounds, radius, radius, fillPaint)
+
+        val strokePaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            style = Paint.Style.STROKE
+            strokeWidth = 3f
+            color = accentColor
+            pathEffect = DashPathEffect(floatArrayOf(14f, 10f), 0f)
+        }
+        canvas.drawRoundRect(bounds, radius, radius, strokePaint)
+
+        val textPaint = Paint(Paint.ANTI_ALIAS_FLAG).apply {
+            color = accentColor
+            textSize = (bounds.height() * 0.28f).coerceIn(16f, 32f)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
+            textAlign = Paint.Align.CENTER
+        }
+        val textY = bounds.centerY() - (textPaint.descent() + textPaint.ascent()) / 2f
+        canvas.drawText("SUA LOGO", bounds.centerX(), textY, textPaint)
     }
 
     private fun drawPromoLogo(canvas: Canvas, logoBitmap: Bitmap, bounds: RectF, logoMode: String) {

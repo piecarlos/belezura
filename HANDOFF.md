@@ -333,7 +333,28 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
   - **Motor Gráfico WYSIWYG 1080×1920 (`PromoRenderer.kt`):** Título principal com tipografia selecionável via `FontManager` (Cinzel, Playfair, Fredoka, Padrão); aplicação de `accentColorHex` com contraste inteligente por luminância preservado; método público `getLogoBounds(context, promoDraft): RectF?` para cálculo de limites e renderização precisa com escala e offset customizados.
   - **Editor Interativo (`PromoEditorScreen.kt` & `CalendarViewModel.kt`):** Gestos de arrastar e pinça/escala na logo diretamente no preview do canvas 1080x1920; BottomSheet organizado em abas limpas (**Texto & Itens** e **Visual & Logo**), com seletor de fontes, paleta rápida de cores de destaque com opção "Automático" e botões rápidos para centralizar e resetar posição/escala da logomarca. Ações no `CalendarViewModel` com persistência automática no `SharedPreferences`.
   - **Suíte de Testes:** `PromoModelsTest.kt` atualizado com cobertura de round-trip dos novos campos e teste estrito de retrocompatibilidade com JSONs legados.
-- **Sprint C.3 — Integração das 6 Molduras Sazonais WebP (Entregue):**
+- **Sprint C.3 — UX de Nomes, Galeria com Confirmação, Histórico Visual e Logo Livre (Entregue):**
+  - **Aviso de Nome Duplicado + Placeholder "Maria" (`DayEditSheet.kt`, `HomeScreen.kt`, `CalendarViewModel.kt`):**
+    - Substituição de todos os placeholders antigos pelo universal `"Ex: Maria"`.
+    - Criação do helper puro `ClientNameHelper` (`normalize` com trim, lowercase e remoção de acentos via `Normalizer.Form.NFD`, além de `isDuplicate`).
+    - Detecção em tempo real em `DayEditSheet.kt` enquanto o nome é digitado, exibindo card de aviso suave (âmbar) indicando dia e mês onde o cliente já foi agendado, com sugestão de sobrenome/horário sem bloquear a inclusão.
+  - **Galeria com Confirmação Explícita e Selo "NOVO" com Expiração Automática (`ThemeCatalog.kt`, `ThemeGallerySheet.kt`, `ThemeModels.kt`, `MainActivity.kt`):**
+    - Campo `val addedDate: String? = null` em `ThemeItem` (formato `"YYYY-MM-DD"`), preenchido com `"2026-11-20"` nas 6 novas molduras sazonais WebP e `null` nos temas anteriores.
+    - Helper puro e determinístico `isThemeNew(addedDate, nowMillis, windowDays = 30)` usando `java.util.Calendar` para comparar janelas sem dependência de `java.time` (compatível com qualquer `minSdk`).
+    - Propriedade computada `val isNew: Boolean get() = isThemeNew(addedDate)` e sobrecarga `isNew(nowMillis)` permitindo cálculo memoizado único via `remember { System.currentTimeMillis() }` na abertura de `ThemeGallerySheet.kt`, evitando recálculo por item durante o scroll.
+    - Selo "NOVO" no canto superior esquerdo com pílula escura (`Color(0xDE111115)`), borda sutil e gradiente arco-íris animado linearmente nas próprias letras (`Brush.linearGradient` com `TileMode.Repeated`), mantendo o selo PRO em `TopEnd`.
+    - Toque na moldura atua como pré-seleção (`pendingThemeId`) sem fechar a galeria.
+    - Barra inferior fixa com botões contextuais: na Home, `✓ Aplicar (Home)` e `✓ Ir p/ Calendário`; no Editor e Promo Editor, `✓ Aplicar moldura`.
+  - **Histórico Visual Macro vs. Restaurar Padrão Geral (`CalendarModels.kt`, `CalendarViewModel.kt`, `LayoutAdjustPanel.kt`):**
+    - Modelo serializável `VisualSnapshot` (salvo em `SharedPreferences` como `previous_visual_snapshot`) gravado apenas em transições macro (troca de tema confirmada, reset geral ou reversão).
+    - Diálogo de confirmação claro no botão de reset garantindo que clientes e marcações de dias jamais são apagados, oferecendo reversão para o snapshot anterior (com nome do tema salvo) ou restauração das configurações de fábrica.
+  - **Logo no Calendário a partir de 100% sem trava em 220% (`LayoutAdjustPanel.kt`, `EditorScreen.kt`, `CalendarViewModel.kt`):**
+    - Escala padrão mantida em 1.0f (exibida como 100% na interface com botão rápido de redefinição).
+    - Faixa de escala expandida para `0.30f..5.0f` tanto no slider quanto no gesto de pinça no canvas, sem quebra de limites no canvas 1080x1920.
+  - **Correção da Logo em Promoções (`PromoEditorScreen.kt`, `PromoRenderer.kt`, `CalendarViewModel.kt`):**
+    - Movimento desimpedido com conversão correta de coordenadas de toque para a escala virtual 1080x1920 e área de toque generosa (slop de 60px).
+    - Modo de ajuste de logo sem obstrução: ao tocar na logo ou selecionar ajuste visual, o BottomSheet se recolhe exibindo barra/pílula compacta no topo com orientações e atalhos rápidos (`100%` e `Concluir`), mantendo 100% do story 9:16 visível durante arraste e pinça (`0.3f..5.0f`).
+  - **Suíte de Testes Automatizados:** `SprintC3Test.kt` validando normalização de nomes, detecção de duplicatas multi-mês e round-trip/retrocompatibilidade de `VisualSnapshot`.
   - **Proteção R8 (`res/raw/keep.xml`):** Inclusão de `@drawable/bg_black_friday_luxo`, `@drawable/bg_natal_minimal`, `@drawable/bg_natal_clean`, `@drawable/bg_natal_2`, `@drawable/bg_ano_novo_glam` e `@drawable/bg_carnaval_glam` na diretiva `tools:keep`.
   - **Catálogo de Temas (`ThemeCatalog.kt`):** Registro dos 6 novos temas com `ThemeSourceType.EMBEDDED` na categoria `SEASONAL` ("Em Alta / Datas"):
     1. *Black Friday Luxo* (`bg_black_friday_luxo`): fundo escuro, detalhes em ouro luminoso (`#FFE082` / `#D4AF37`), `isPro = true`.
@@ -344,6 +365,23 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
     6. *Carnaval Glam* (`bg_carnaval_glam`): vinho, rosé e confetes dourados (`#6B213A`), `isPro = true`.
     Todos configurados com `defaultCalendarScale = 0.88f` para proteger as molduras decorativas dos cantos.
   - **Decodificação 1:1 e Renderização (`BackgroundManager.kt`, `ThemeGallerySheet.kt`, `CalendarRenderer.kt`, `PromoRenderer.kt`):** Método centralizado `decodeResourceBitmap` com `inScaled = false` e `ARGB_8888`, miniaturas reais exibidas na grade da galeria e contraste adaptativo por luminância em fundos escuros/claros.
+- **Sprint C.4 — Redesign Unificado do Editor de Promoções, Barra da Logo Desobstruída e Expiração do "NOVO" (Entregue):**
+  - **Barra de Ajuste de Logo Desobstruída no Rodapé (`PromoEditorScreen.kt`):**
+    - Remoção da antiga barra flutuante do topo (que cobria a logo durante a edição).
+    - Exibição de barra compacta ancorada no rodapé (`bottomBar` do `Scaffold` com `navigationBarsPadding()`) contendo: `"Arraste ou pinça na logo"`, botões rápidos `100%`, `Centralizar` e `Concluir`.
+    - Snap magnético suave ao centro horizontal (`abs(logoOffsetX) < 18f` -> `0f`) acompanhado de linha-guia central vertical pontilhada translúcida renderizada no canvas durante o snap.
+  - **Painel Único de Edição de Promoção (`PromoEditorScreen.kt`):**
+    - Eliminação das abas divididas (`Texto` vs `Visual`) e botões redundantes, consolidando tudo em um único fluxo vertical elegante e intuitivo.
+    - Fundo translúcido com `surface.copy(alpha = 0.92f)` e scrim leve `Color.Black.copy(alpha = 0.22f)`.
+    - Mini-Preview Ao Vivo do Título no topo, renderizando o texto do título em tempo real com a fonte e a cor de destaque selecionadas sobre faixa harmonizada com o tema ativo.
+    - Chips de Fonte (`Cinzel`, `Playfair`, `Fredoka`, `Padrão`) renderizados no `FontFamily` real correspondente (`R.font.*`).
+    - Faixa compacta de seleção de Cor de Destaque com bolinhas cromáticas (`Auto`, `Ouro`, `Rosa`, `Vinho`, `Rosé`, `Terra`, `Verde`, `Grafite`).
+    - Switch discreto `"Exibir logo no story"` com legenda de orientação `"Toque e arraste a logo direto na tela"`.
+  - **Expiração Automática do Selo "NOVO" (`ThemeModels.kt`, `ThemeCatalog.kt`, `ThemeGallerySheet.kt`):**
+    - Suporte a `addedDate: String? = null` (`"YYYY-MM-DD"`) em `ThemeItem`, configurado como `"2026-11-20"` nos 6 temas recentes e `null` nos anteriores.
+    - Helper puro determinístico `isThemeNew(addedDate, nowMillis, windowDays = 30)` usando `java.util.Calendar` (sem `java.time`, compatível com qualquer `minSdk` e seguro contra falhas).
+    - Memoização de `nowMillis = remember { System.currentTimeMillis() }` na abertura de `ThemeGallerySheet.kt` e renderização em gradiente arco-íris fluido sobre pílula escura de alto contraste.
+  - **Suíte de Testes Automatizados:** `SprintC3Test.kt` e `PromoModelsTest.kt` validando todas as condições de expiração de datas, retrocompatibilidade e tolerância do snap magnético.
 - **Suíte de Testes Automatizados:**
   - `WhatsAppHelperTest.kt`: Validação dos 3 templates de mensagem, formatação de dias da semana em pt-BR e higienização de nomes.
   - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.

@@ -204,7 +204,8 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     },
                     onOpenLogoSettings = { showLogoSettingsDialog = true },
                     onSaveToGallery = { ctx -> viewModel.savePromoToGallery(ctx) },
-                    onShare = { ctx -> viewModel.sharePromo(ctx) }
+                    onShare = { ctx -> viewModel.sharePromo(ctx) },
+                    onLogoTransform = { zoom, dx, dy -> viewModel.applyPromoLogoTransform(zoom, dx, dy) }
                 )
             }
             AppScreen.CALENDAR -> {
@@ -246,7 +247,9 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
                     onCardAccentColorChange = { color -> viewModel.updateCardAccentColor(color) },
                     onStepElementOffset = { element, dx, dy -> viewModel.stepElementOffset(element, dx, dy) },
                     onCenterElementX = { element -> viewModel.centerElementX(element) },
-                    onResetLayout = { viewModel.resetLayout() },
+                    onResetLayout = { viewModel.resetLayoutToFactoryDefault() },
+                    onRestorePreviousSnapshot = { viewModel.restorePreviousVisualSnapshot() },
+                    onResetToFactoryDefault = { viewModel.resetLayoutToFactoryDefault() },
                     onUploadLogo = {
                         logoPickerLauncher.launch("image/*")
                     },
@@ -282,7 +285,8 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             onAddName = { viewModel.addNameToCell(cell.slotIndex, it) },
             onRemoveName = { viewModel.removeNameFromCell(cell.slotIndex, it) },
             onMoveUp = { viewModel.moveNameUp(cell.slotIndex, it) },
-            onMoveDown = { viewModel.moveNameDown(cell.slotIndex, it) }
+            onMoveDown = { viewModel.moveNameDown(cell.slotIndex, it) },
+            onCheckDuplicateName = { viewModel.findDuplicateClient(it, uiState.currentYearMonth) }
         )
     }
 
@@ -329,8 +333,13 @@ fun CalendarAppScreen(viewModel: CalendarViewModel) {
             hasCustomLogo = uiState.hasCustomLogo,
             subtitle = themeGallerySubtitle,
             initialCategory = themeGalleryInitialCategory,
+            callerScreen = uiState.currentScreen,
             onSelectTheme = { theme ->
                 viewModel.selectTheme(theme)
+            },
+            onApplyAndNavigateToEditor = { theme ->
+                viewModel.selectTheme(theme)
+                viewModel.navigateTo(AppScreen.CALENDAR)
             },
             onPickCustomBackground = {
                 photoPickerLauncher.launch(

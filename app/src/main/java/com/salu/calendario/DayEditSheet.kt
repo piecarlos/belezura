@@ -1,5 +1,6 @@
 package com.salu.calendario
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -12,6 +13,7 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -24,6 +26,7 @@ import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -33,6 +36,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
@@ -66,12 +70,19 @@ fun CellEditBottomSheet(
     onAddName: (String) -> Unit,
     onRemoveName: (Int) -> Unit,
     onMoveUp: (Int) -> Unit,
-    onMoveDown: (Int) -> Unit
+    onMoveDown: (Int) -> Unit,
+    onCheckDuplicateName: (String) -> ClientSearchResult? = { null }
 ) {
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     var newNameText by rememberSaveable { mutableStateOf("") }
     var whatsAppClientName by rememberSaveable { mutableStateOf<String?>(null) }
     val focusRequester = remember { FocusRequester() }
+
+    val duplicateMatch = remember(newNameText) {
+        if (newNameText.trim().length >= 2) {
+            onCheckDuplicateName(newNameText.trim())
+        } else null
+    }
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -175,7 +186,7 @@ fun CellEditBottomSheet(
                         modifier = Modifier
                             .weight(1f)
                             .focusRequester(focusRequester),
-                        placeholder = { Text("Ex: Milka Noiva") },
+                        placeholder = { Text("Ex: Maria") },
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(
                             capitalization = KeyboardCapitalization.Words,
@@ -206,6 +217,42 @@ fun CellEditBottomSheet(
                         modifier = Modifier.height(54.dp)
                     ) {
                         Icon(Icons.Default.Add, contentDescription = "Adicionar")
+                    }
+                }
+
+                if (duplicateMatch != null) {
+                    val locationDesc = if (duplicateMatch.yearMonth == yearMonth) {
+                        "dia ${duplicateMatch.day}"
+                    } else {
+                        "${CalendarEngine.getMonthDisplayName(duplicateMatch.yearMonth)}/${duplicateMatch.yearMonth.year} (dia ${duplicateMatch.day})"
+                    }
+                    val exampleFirstName = duplicateMatch.name.trim().split(" ").firstOrNull() ?: duplicateMatch.name
+                    Surface(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 6.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        color = Color(0xFFFFF8E1),
+                        border = BorderStroke(1.dp, Color(0xFFFFE082))
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(horizontal = 10.dp, vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Icon(
+                                Icons.Default.Info,
+                                contentDescription = null,
+                                tint = Color(0xFFF57F17),
+                                modifier = Modifier.size(16.dp)
+                            )
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = "Já existe '${duplicateMatch.name}' agendada ($locationDesc). Sugestão: adicione sobrenome ou lembrete (ex: $exampleFirstName Silva - 14h).",
+                                fontSize = 11.5.sp,
+                                color = Color(0xFF7F4B00),
+                                lineHeight = 15.sp
+                            )
+                        }
                     }
                 }
 

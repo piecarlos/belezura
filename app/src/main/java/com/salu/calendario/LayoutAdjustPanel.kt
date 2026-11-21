@@ -27,6 +27,8 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDownward
 import androidx.compose.material.icons.filled.ArrowUpward
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.RestartAlt
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -96,6 +98,8 @@ fun LayoutAdjustmentPanel(
     onStepElementOffset: (EditableElement, Float, Float) -> Unit,
     onCenterElementX: (EditableElement) -> Unit,
     onResetLayout: () -> Unit,
+    onRestorePreviousSnapshot: () -> Unit = {},
+    onResetToFactoryDefault: () -> Unit = onResetLayout,
     onCloseEditMode: () -> Unit,
     onUploadLogo: () -> Unit = {},
     onToggleLogoEnabled: (Boolean) -> Unit = {},
@@ -107,6 +111,7 @@ fun LayoutAdjustmentPanel(
     onFooterColorChange: (Int) -> Unit = {}
 ) {
     var activeTab by rememberSaveable { mutableStateOf(LayoutToolTab.POSITION) }
+    var showResetConfirmDialog by remember { mutableStateOf(false) }
 
     val currentElement = if (uiState.selectedElement == EditableElement.NONE) {
         EditableElement.MONTH
@@ -226,7 +231,7 @@ fun LayoutAdjustmentPanel(
                 }
 
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    IconButton(onClick = onResetLayout, modifier = Modifier.size(34.dp)) {
+                    IconButton(onClick = { showResetConfirmDialog = true }, modifier = Modifier.size(34.dp)) {
                         Icon(
                             Icons.Default.RestartAlt,
                             contentDescription = "Resetar padrão",
@@ -243,6 +248,120 @@ fun LayoutAdjustmentPanel(
                         )
                     }
                 }
+            }
+
+            if (showResetConfirmDialog) {
+                AlertDialog(
+                    onDismissRequest = { showResetConfirmDialog = false },
+                    title = {
+                        Text(
+                            "Redefinir Visual",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 18.sp,
+                            color = Color(0xFF5E2326)
+                        )
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier.fillMaxWidth(),
+                            verticalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            Surface(
+                                shape = RoundedCornerShape(8.dp),
+                                color = Color(0xFFFFF3E0),
+                                border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFFFCC80)),
+                                modifier = Modifier.fillMaxWidth()
+                            ) {
+                                Row(
+                                    modifier = Modifier.padding(10.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(
+                                        Icons.Default.Info,
+                                        contentDescription = null,
+                                        tint = Color(0xFFE65100),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Spacer(Modifier.width(8.dp))
+                                    Text(
+                                        "Seus clientes e marcações de dias NÃO serão apagados. Apenas fontes, cores e posições visuais serão redefinidos.",
+                                        fontSize = 12.sp,
+                                        color = Color(0xFF5E2326),
+                                        lineHeight = 16.sp
+                                    )
+                                }
+                            }
+
+                            // Opção 1: Voltar à configuração anterior
+                            val snapshot = uiState.previousVisualSnapshot
+                            OutlinedButton(
+                                onClick = {
+                                    onRestorePreviousSnapshot()
+                                    showResetConfirmDialog = false
+                                },
+                                enabled = snapshot != null,
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                border = androidx.compose.foundation.BorderStroke(1.5.dp, if (snapshot != null) Color(0xFFB82B62) else Color.LightGray)
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        "Voltar à configuração anterior",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = if (snapshot != null) Color(0xFFB82B62) else Color.Gray
+                                    )
+                                    Text(
+                                        if (snapshot != null) "Reverte para: ${snapshot.themeName}" else "Nenhuma configuração anterior salva",
+                                        fontSize = 11.sp,
+                                        color = Color.Gray
+                                    )
+                                }
+                            }
+
+                            // Opção 2: Restaurar padrão geral
+                            Button(
+                                onClick = {
+                                    onResetToFactoryDefault()
+                                    showResetConfirmDialog = false
+                                },
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(10.dp),
+                                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFB82B62))
+                            ) {
+                                Column(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(vertical = 4.dp),
+                                    horizontalAlignment = Alignment.Start
+                                ) {
+                                    Text(
+                                        "Restaurar padrão geral",
+                                        fontWeight = FontWeight.Bold,
+                                        fontSize = 13.sp,
+                                        color = Color.White
+                                    )
+                                    Text(
+                                        "Volta ao Floral Clássico padrão de fábrica",
+                                        fontSize = 11.sp,
+                                        color = Color(0xFFFFDDE6)
+                                    )
+                                }
+                            }
+                        }
+                    },
+                    confirmButton = {},
+                    dismissButton = {
+                        androidx.compose.material3.TextButton(onClick = { showResetConfirmDialog = false }) {
+                            Text("Cancelar", color = Color.Gray)
+                        }
+                    }
+                )
             }
 
             Spacer(Modifier.height(6.dp))
@@ -464,7 +583,7 @@ fun LayoutAdjustmentPanel(
 
                         val scaleRange = when (currentElement) {
                             EditableElement.GRID_CARD -> 0.70f..1.25f
-                            EditableElement.LOGO -> 0.50f..2.20f
+                            EditableElement.LOGO -> 0.30f..5.0f
                             EditableElement.FOOTER_MESSAGE -> 0.60f..1.80f
                             else -> 0.60f..1.60f
                         }
@@ -490,6 +609,18 @@ fun LayoutAdjustmentPanel(
                                 ),
                                 modifier = Modifier.weight(1f)
                             )
+                            if (currentElement == EditableElement.LOGO) {
+                                Spacer(Modifier.width(6.dp))
+                                OutlinedButton(
+                                    onClick = { onScaleChange(1.0f) },
+                                    shape = RoundedCornerShape(6.dp),
+                                    contentPadding = PaddingValues(horizontal = 6.dp, vertical = 0.dp),
+                                    modifier = Modifier.height(28.dp),
+                                    border = androidx.compose.foundation.BorderStroke(1.dp, Color(0xFFB82B62))
+                                ) {
+                                    Text("100%", fontSize = 10.sp, fontWeight = FontWeight.Bold, color = Color(0xFFB82B62))
+                                }
+                            }
                         }
 
                         // Fine adjustment and Center X buttons line

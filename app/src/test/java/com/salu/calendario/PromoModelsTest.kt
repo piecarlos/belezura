@@ -130,4 +130,19 @@ class PromoModelsTest {
         assertEquals("Item 1", parsed.items[0].label)
         assertEquals("Item 6", parsed.items[5].label)
     }
+
+    @Test
+    fun testLogoMagneticSnapLogic() {
+        val snapThreshold = 18f
+        fun applySnap(offsetX: Float): Float {
+            return if (kotlin.math.abs(offsetX) < snapThreshold) 0f else offsetX
+        }
+
+        assertEquals(0f, applySnap(0f), 0.001f)
+        assertEquals(0f, applySnap(10f), 0.001f)
+        assertEquals(0f, applySnap(17.9f), 0.001f)
+        assertEquals(0f, applySnap(-17.9f), 0.001f)
+        assertEquals(18.5f, applySnap(18.5f), 0.001f)
+        assertEquals(-25f, applySnap(-25f), 0.001f)
+    }
 }

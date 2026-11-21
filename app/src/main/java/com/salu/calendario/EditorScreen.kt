@@ -109,6 +109,8 @@ fun EditorScreen(
     onStepElementOffset: (EditableElement, Float, Float) -> Unit,
     onCenterElementX: (EditableElement) -> Unit,
     onResetLayout: () -> Unit,
+    onRestorePreviousSnapshot: () -> Unit = {},
+    onResetToFactoryDefault: () -> Unit = onResetLayout,
     onUploadLogo: () -> Unit = {},
     onToggleLogoEnabled: (Boolean) -> Unit = {},
     onLogoModeChange: (String) -> Unit = {},
@@ -405,6 +407,8 @@ fun EditorScreen(
                     onStepElementOffset = onStepElementOffset,
                     onCenterElementX = onCenterElementX,
                     onResetLayout = onResetLayout,
+                    onRestorePreviousSnapshot = onRestorePreviousSnapshot,
+                    onResetToFactoryDefault = onResetToFactoryDefault,
                     onCloseEditMode = onToggleEditMode,
                     onUploadLogo = onUploadLogo,
                     onToggleLogoEnabled = onToggleLogoEnabled,
@@ -487,7 +491,7 @@ fun CalendarCanvasView(
                                     if (targetElement == EditableElement.LOGO) {
                                         if (zoomChange != 1f) {
                                             val currentScale = uiState.layoutConfig.logoScale
-                                            val newScale = (currentScale * zoomChange).coerceIn(0.50f, 2.20f)
+                                            val newScale = (currentScale * zoomChange).coerceIn(0.30f, 5.0f)
                                             onScaleChange(newScale)
                                         }
                                         if (panChange != Offset.Zero) {

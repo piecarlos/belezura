@@ -37,14 +37,13 @@ data class CalendarUiState(
     val searchQuery: String = "",
     val searchResults: List<ClientSearchResult> = emptyList(),
     val lastBackupTimeFormatted: String? = null,
-    val promoDraft: PromoDraft = PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
+    val promoDraft: PromoDraft = PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA),
+    val previousVisualSnapshot: VisualSnapshot? = null
 )
 
 object ClientSearchHelper {
     fun normalize(str: String): String {
-        return Normalizer.normalize(str, Normalizer.Form.NFD)
-            .replace("\\p{InCombiningDiacriticalMarks}+".toRegex(), "")
-            .lowercase()
+        return ClientNameHelper.normalize(str)
     }
 
     fun search(allEntries: Map<String, *>, query: String): List<ClientSearchResult> {
@@ -90,6 +89,60 @@ object ClientSearchHelper {
         )
         return results
     }
+
+    fun findDuplicateClient(
+        name: String,
+        currentYearMonth: YearMonth,
+        currentCells: List<CellData>,
+        allEntries: Map<String, *>
+    ): ClientSearchResult? {
+        val clean = ClientNameHelper.normalize(name)
+        if (clean.length < 2) return null
+
+        // 1. Check current month in memory first
+        for (cell in currentCells) {
+            val day = cell.dayNumber ?: continue
+            for (n in cell.names) {
+                if (ClientNameHelper.isDuplicate(n, name)) {
+                    return ClientSearchResult(n, currentYearMonth, day, cell.slotIndex)
+                }
+            }
+        }
+
+        // 2. Check other months in prefs
+        for ((key, value) in allEntries) {
+            if (key.startsWith("month_data_") && value is String) {
+                val parts = key.removePrefix("month_data_").split("_")
+                if (parts.size == 2) {
+                    val y = parts[0].toIntOrNull()
+                    val m = parts[1].toIntOrNull()
+                    if (y != null && m != null) {
+                        val ym = YearMonth.of(y, m)
+                        if (ym == currentYearMonth) continue
+                        try {
+                            val root = JSONObject(value)
+                            val slotsArr = root.optJSONArray("slots") ?: continue
+                            for (i in 0 until slotsArr.length()) {
+                                val obj = slotsArr.getJSONObject(i)
+                                val slotIndex = obj.getInt("slot")
+                                val dayNum = if (obj.has("day") && !obj.isNull("day")) obj.getInt("day") else null
+                                if (dayNum != null) {
+                                    val namesArr = obj.optJSONArray("names") ?: continue
+                                    for (j in 0 until namesArr.length()) {
+                                        val rawName = namesArr.getString(j)
+                                        if (ClientNameHelper.isDuplicate(rawName, name)) {
+                                            return ClientSearchResult(rawName, ym, dayNum, slotIndex)
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (_: Exception) {}
+                    }
+                }
+            }
+        }
+        return null
+    }
 }
 
 class CalendarViewModel(application: Application) : AndroidViewModel(application) {
@@ -117,6 +170,9 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             PromoDraft.getPreset(PromoTemplateType.AGENDA_ABERTA)
         }
 
+        val savedSnapshotJson = prefs.getString("previous_visual_snapshot", null)
+        val loadedSnapshot = savedSnapshotJson?.let { VisualSnapshot.fromJson(it) }
+
         _uiState.update {
             it.copy(
                 currentYearMonth = initialYm,
@@ -125,7 +181,8 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
                 hasCustomBackground = hasCustom,
                 hasCustomLogo = hasLogo,
                 lastBackupTimeFormatted = lastBackup,
-                promoDraft = initialPromo
+                promoDraft = initialPromo,
+                previousVisualSnapshot = loadedSnapshot
             )
         }
         refreshSavedMonthsSummaries()
@@ -490,7 +547,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
             EditableElement.MONTH -> cfg.copy(monthScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.YEAR -> cfg.copy(yearScale = scale.coerceIn(0.6f, 1.6f))
             EditableElement.GRID_CARD -> cfg.copy(cardScale = scale.coerceIn(0.7f, 1.25f))
-            EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.50f, 2.20f))
+            EditableElement.LOGO -> cfg.copy(logoScale = scale.coerceIn(0.30f, 5.0f))
             EditableElement.FOOTER_MESSAGE -> cfg.copy(footerScale = scale.coerceIn(0.60f, 1.80f))
             EditableElement.NONE -> cfg
         }
@@ -626,12 +683,63 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         }
     }
 
+    fun findDuplicateClient(name: String, currentYearMonth: YearMonth): ClientSearchResult? {
+        return ClientSearchHelper.findDuplicateClient(
+            name = name,
+            currentYearMonth = currentYearMonth,
+            currentCells = _uiState.value.cells,
+            allEntries = prefs.all
+        )
+    }
+
+    fun captureVisualSnapshot(): VisualSnapshot {
+        val currentThemeId = _uiState.value.layoutConfig.selectedThemeId
+        val currentThemeName = ThemeCatalog.getThemeById(currentThemeId)?.name ?: "Tema Padrão"
+        val customUri = if (_uiState.value.hasCustomBackground) {
+            prefs.getString("custom_background_uri", null)
+        } else null
+        return VisualSnapshot(
+            themeId = currentThemeId,
+            themeName = currentThemeName,
+            customBackgroundUri = customUri,
+            layoutConfig = _uiState.value.layoutConfig
+        )
+    }
+
+    fun savePreviousVisualSnapshot(snapshot: VisualSnapshot) {
+        prefs.edit().putString("previous_visual_snapshot", snapshot.toJson()).apply()
+        _uiState.update { it.copy(previousVisualSnapshot = snapshot) }
+    }
+
+    fun restorePreviousVisualSnapshot() {
+        val previous = _uiState.value.previousVisualSnapshot ?: return
+        val currentSnap = captureVisualSnapshot()
+        savePreviousVisualSnapshot(currentSnap)
+        applyVisualSnapshot(previous)
+        showSnackbar("Restaurado visual: ${previous.themeName}")
+    }
+
+    private fun applyVisualSnapshot(snapshot: VisualSnapshot) {
+        if (snapshot.customBackgroundUri != null) {
+            _uiState.update { it.copy(hasCustomBackground = true) }
+        } else {
+            if (BackgroundManager.hasCustomBackground(getApplication())) {
+                BackgroundManager.restoreDefaultBackground(getApplication())
+                _uiState.update { it.copy(hasCustomBackground = false) }
+            }
+        }
+        _uiState.update { it.copy(layoutConfig = snapshot.layoutConfig) }
+        saveLayoutConfig(snapshot.layoutConfig)
+    }
+
     // Theme & Logo operations (Phase A)
     fun selectTheme(theme: ThemeItem) {
         if (theme.isPro && !ProAccessConfig.canUseTheme(theme)) {
             _uiState.update { it.copy(proPreviewTheme = theme) }
             return
         }
+        val currentSnap = captureVisualSnapshot()
+        savePreviousVisualSnapshot(currentSnap)
         if (BackgroundManager.hasCustomBackground(getApplication())) {
             BackgroundManager.restoreDefaultBackground(getApplication())
             _uiState.update { it.copy(hasCustomBackground = false) }
@@ -712,7 +820,7 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
     }
 
     fun updateLogoScale(scale: Float) {
-        val updated = _uiState.value.layoutConfig.copy(logoScale = scale.coerceIn(0.50f, 2.20f))
+        val updated = _uiState.value.layoutConfig.copy(logoScale = scale.coerceIn(0.30f, 5.0f))
         _uiState.update { it.copy(layoutConfig = updated) }
         saveLayoutConfig(updated)
     }
@@ -768,11 +876,21 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         saveLayoutConfig(updated)
     }
 
-    fun resetLayout() {
-        val defaultCfg = LayoutConfig.DEFAULT
+    fun resetLayoutToFactoryDefault() {
+        val currentSnap = captureVisualSnapshot()
+        savePreviousVisualSnapshot(currentSnap)
+        if (BackgroundManager.hasCustomBackground(getApplication())) {
+            BackgroundManager.restoreDefaultBackground(getApplication())
+            _uiState.update { it.copy(hasCustomBackground = false) }
+        }
+        val defaultCfg = LayoutConfig.DEFAULT.copy(selectedThemeId = "floral_default")
         _uiState.update { it.copy(layoutConfig = defaultCfg) }
         saveLayoutConfig(defaultCfg)
-        showSnackbar("Layout e cores restaurados para o padrão original da v1!")
+        showSnackbar("Layout e cores restaurados para o padrão geral!")
+    }
+
+    fun resetLayout() {
+        resetLayoutToFactoryDefault()
     }
 
     // Background Management
@@ -880,13 +998,29 @@ class CalendarViewModel(application: Application) : AndroidViewModel(application
         updatePromoDraft(current.copy(accentColorHex = hex))
     }
 
+    fun applyPromoLogoTransform(zoomChange: Float, dx: Float, dy: Float) {
+        _uiState.update { state ->
+            val current = state.promoDraft
+            val newScale = (current.logoScale * zoomChange).coerceIn(0.3f, 5.0f)
+            val newX = (current.logoOffsetX + dx).coerceIn(-540f, 540f)
+            val newY = (current.logoOffsetY + dy).coerceIn(-600f, 1600f)
+            val updated = current.copy(
+                logoScale = newScale,
+                logoOffsetX = newX,
+                logoOffsetY = newY
+            )
+            prefs.edit().putString("promo_draft_json", updated.toJson()).apply()
+            state.copy(promoDraft = updated)
+        }
+    }
+
     fun updatePromoLogoTransform(scale: Float, offsetX: Float, offsetY: Float) {
         val current = _uiState.value.promoDraft
         updatePromoDraft(
             current.copy(
-                logoScale = scale.coerceIn(0.4f, 2.5f),
-                logoOffsetX = offsetX.coerceIn(-500f, 500f),
-                logoOffsetY = offsetY.coerceIn(-800f, 800f)
+                logoScale = scale.coerceIn(0.3f, 5.0f),
+                logoOffsetX = offsetX.coerceIn(-540f, 540f),
+                logoOffsetY = offsetY.coerceIn(-600f, 1600f)
             )
         )
     }
