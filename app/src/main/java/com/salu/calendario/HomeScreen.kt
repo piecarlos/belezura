@@ -61,6 +61,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -745,8 +746,10 @@ fun HomeScreen(
             // 5. Client Search Box
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFAF5F7)),
-                shape = RoundedCornerShape(14.dp)
+                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFFFFF)),
+                border = BorderStroke(1.dp, Color(0xFFEDD9E0)),
+                shape = RoundedCornerShape(20.dp),
+                elevation = CardDefaults.cardElevation(defaultElevation = 0.dp)
             ) {
                 Column(
                     modifier = Modifier
@@ -765,8 +768,8 @@ fun HomeScreen(
                         value = uiState.searchQuery,
                         onValueChange = onSearchQueryChange,
                         modifier = Modifier.fillMaxWidth(),
-                        placeholder = { Text("Ex: Maria, Jessica, Glória...", fontSize = 13.sp) },
-                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF8C5A60)) },
+                        placeholder = { Text("Ex: Maria, Jessica, Glória...", fontSize = 13.sp, color = Color(0xFF7E626A)) },
+                        leadingIcon = { Icon(Icons.Default.Search, null, tint = Color(0xFF7E626A)) },
                         trailingIcon = {
                             if (uiState.searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { onSearchQueryChange("") }) {
@@ -777,7 +780,17 @@ fun HomeScreen(
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { focusManager.clearFocus() }),
-                        shape = RoundedCornerShape(10.dp)
+                        shape = RoundedCornerShape(10.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            unfocusedBorderColor = Color(0xFFE3C8D2),
+                            focusedBorderColor = Color(0xFFB52B5B),
+                            unfocusedContainerColor = Color(0xFFFCF8F9),
+                            focusedContainerColor = Color(0xFFFFFFFF),
+                            focusedLeadingIconColor = Color(0xFF7E626A),
+                            unfocusedLeadingIconColor = Color(0xFF7E626A),
+                            focusedPlaceholderColor = Color(0xFF7E626A),
+                            unfocusedPlaceholderColor = Color(0xFF7E626A)
+                        )
                     )
 
                     // Search Results List
@@ -958,14 +971,14 @@ fun HomeScreen(
                                     )
                                     Spacer(Modifier.height(4.dp))
                                     Text(
-                                        text = if (summary.namesCount == 1) "1 nome" else "${summary.namesCount} nomes",
+                                        text = if (summary.namesCount == 1) "1 cliente" else "${summary.namesCount} clientes",
                                         fontSize = 12.sp,
                                         color = Color(0xFF2E6B53),
                                         fontWeight = FontWeight.Medium
                                     )
                                     if (summary.redXCount > 0) {
                                         Text(
-                                            text = "${summary.redXCount} com X",
+                                            text = if (summary.redXCount == 1) "1 fechado" else "${summary.redXCount} fechados",
                                             fontSize = 11.sp,
                                             color = Color(0xFFC62828)
                                         )
