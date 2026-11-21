@@ -4,7 +4,11 @@ import android.content.Context
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -61,6 +65,7 @@ import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -70,12 +75,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
@@ -113,6 +123,44 @@ fun HomeScreen(
     var whatsAppTargetResult by remember { mutableStateOf<ClientSearchResult?>(null) }
     var showPixConfigDialog by remember { mutableStateOf(false) }
 
+    // Subtle Brand Entrance Shimmer Animation
+    val shimmerProgress = remember { Animatable(0f) }
+    LaunchedEffect(Unit) {
+        shimmerProgress.animateTo(
+            targetValue = 1f,
+            animationSpec = tween(durationMillis = 2400, easing = FastOutSlowInEasing)
+        )
+    }
+
+    val playfairFontFamily = remember { FontFamily(Font(R.font.playfair_display_bold)) }
+    val brandTitleStyle = if (shimmerProgress.value < 0.98f) {
+        val p = shimmerProgress.value
+        TextStyle(
+            brush = Brush.linearGradient(
+                colors = listOf(
+                    Color(0xFF4A1223),
+                    Color(0xFFA85A72),
+                    Color(0xFFD9BC8C),
+                    Color(0xFF4A1223)
+                ),
+                start = Offset(x = (p * 800f) - 400f, y = 0f),
+                end = Offset(x = (p * 800f) + 200f, y = 0f)
+            ),
+            fontFamily = playfairFontFamily,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        )
+    } else {
+        TextStyle(
+            color = Color(0xFF4A1223),
+            fontFamily = playfairFontFamily,
+            fontSize = 28.sp,
+            fontWeight = FontWeight.Bold,
+            letterSpacing = 0.5.sp
+        )
+    }
+
     // Active month summary calculation
     val activeYm = uiState.currentYearMonth
     val monthDays = uiState.cells.filter { it.dayNumber != null }
@@ -138,7 +186,7 @@ fun HomeScreen(
             .fillMaxSize()
             .statusBarsPadding()
             .navigationBarsPadding(),
-        color = Color(0xFFFFFDFD)
+        color = Color(0xFFFBF6F7)
     ) {
         Column(
             modifier = Modifier
@@ -150,38 +198,39 @@ fun HomeScreen(
             // 1. Header Block (Belezura Hub)
             Row(
                 modifier = Modifier.fillMaxWidth(),
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
             ) {
+                Image(
+                    painter = painterResource(R.drawable.ic_belezura_mark),
+                    contentDescription = "Belezura",
+                    modifier = Modifier.size(42.dp),
+                    contentScale = ContentScale.Fit
+                )
                 Column {
                     Text(
                         text = "Belezura",
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color(0xFF5E2326)
+                        style = brandTitleStyle
                     )
                     Text(
                         text = "Seu estúdio organizado e bonito",
-                        fontSize = 13.sp,
-                        color = Color(0xFF8C5A60)
+                        fontSize = 12.5.sp,
+                        color = Color(0xFF7E626A)
                     )
                 }
             }
 
             // 2. Active Month Hero Card
             Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .shadow(6.dp, RoundedCornerShape(18.dp)),
+                modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = Color.White),
-                shape = RoundedCornerShape(18.dp),
-                border = CardDefaults.outlinedCardBorder().copy(
-                    brush = Brush.linearGradient(listOf(Color(0xFFE89BAE), Color(0xFFFCEBF1)))
-                )
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFFEDD9E0))
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(18.dp),
+                        .padding(20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     Row(
@@ -329,9 +378,9 @@ fun HomeScreen(
                                 Spacer(Modifier.width(6.dp))
                                 Text("Gerando...", fontSize = 12.sp, color = Color(0xFFB82B62))
                             } else {
-                                Icon(Icons.Default.Share, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(18.dp))
+                                Icon(painter = painterResource(R.drawable.ic_instagram), contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("PNG", fontWeight = FontWeight.SemiBold, color = Color(0xFFB82B62), fontSize = 13.sp)
+                                Text("Story", fontWeight = FontWeight.SemiBold, color = Color(0xFFB82B62), fontSize = 13.sp)
                             }
                         }
                     }
@@ -348,17 +397,16 @@ fun HomeScreen(
                 }
 
                 Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .shadow(4.dp, RoundedCornerShape(16.dp)),
-                    colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF9FA)),
-                    shape = RoundedCornerShape(16.dp),
-                    border = BorderStroke(1.dp, Color(0xFFF3C7D4))
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, Color(0xFFECCFD9)),
+                    colors = CardDefaults.cardColors(containerColor = Color.Transparent)
                 ) {
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(16.dp),
+                            .background(Brush.verticalGradient(listOf(Color(0xFFFFFDFD), Color(0xFFFDF4F7))))
+                            .padding(20.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
                         Row(
@@ -523,15 +571,16 @@ fun HomeScreen(
 
             Card(
                 modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFF7F9)),
-                shape = RoundedCornerShape(16.dp),
-                border = BorderStroke(1.dp, Color(0xFFF7D9E3))
+                shape = RoundedCornerShape(20.dp),
+                border = BorderStroke(1.dp, Color(0xFFD4B475).copy(alpha = 0.38f)),
+                colors = CardDefaults.cardColors(containerColor = Color.Transparent)
             ) {
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(16.dp),
-                    verticalArrangement = Arrangement.spacedBy(12.dp)
+                        .background(Brush.verticalGradient(listOf(Color(0xFF471222), Color(0xFF6A1D35))))
+                        .padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp)
                 ) {
                     // Header: Title + Eye Toggle + Pix Button
                     Row(
@@ -547,7 +596,7 @@ fun HomeScreen(
                                 text = "Meu Caixa • $monthNameCapitalized",
                                 fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = Color(0xFF5E2326)
+                                color = Color(0xFFFFF8F9)
                             )
                             IconButton(
                                 onClick = onToggleHideFinanceValues,
@@ -558,7 +607,7 @@ fun HomeScreen(
                                         if (hideValues) R.drawable.ic_visibility_off else R.drawable.ic_visibility
                                     ),
                                     contentDescription = if (hideValues) "Mostrar valores" else "Ocultar valores",
-                                    tint = Color(0xFF8C5A60),
+                                    tint = Color(0xFFF5D99A),
                                     modifier = Modifier.size(18.dp)
                                 )
                             }
@@ -569,8 +618,8 @@ fun HomeScreen(
                         Surface(
                             onClick = { showPixConfigDialog = true },
                             shape = RoundedCornerShape(14.dp),
-                            color = if (hasPix) Color(0xFFE0F2F1) else Color(0xFFFFF3E0),
-                            border = BorderStroke(1.dp, if (hasPix) Color(0xFF80CBC4) else Color(0xFFFFCC80))
+                            color = Color(0x26F5D99A),
+                            border = BorderStroke(1.dp, Color(0x66F5D99A))
                         ) {
                             Row(
                                 modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
@@ -581,13 +630,13 @@ fun HomeScreen(
                                     painter = painterResource(R.drawable.ic_pix),
                                     contentDescription = null,
                                     modifier = Modifier.size(12.dp),
-                                    tint = if (hasPix) Color(0xFF00796B) else Color(0xFFE65100)
+                                    tint = Color(0xFFF7DF9F)
                                 )
                                 Text(
                                     text = if (hasPix) "Pix OK" else "+ Chave Pix",
                                     fontSize = 11.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = if (hasPix) Color(0xFF00796B) else Color(0xFFE65100)
+                                    color = Color(0xFFF7DF9F)
                                 )
                             }
                         }
@@ -602,22 +651,22 @@ fun HomeScreen(
                         Surface(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color.White,
-                            border = BorderStroke(1.dp, Color(0xFFF0E0E5))
+                            color = Color(0x22FFFFFF),
+                            border = BorderStroke(1.dp, Color(0x26FFFFFF))
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
                                     text = "Total Previsto",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF8C5A60),
+                                    color = Color(0xCCFFF2F5),
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.totalExpectedCents),
+                                    text = if (hideValues) "R$ •••••" else formatBrl(financeSummary.totalExpectedCents),
                                     fontSize = 14.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF5E2326)
+                                    color = Color(0xFFFFFFFF)
                                 )
                             }
                         }
@@ -626,22 +675,22 @@ fun HomeScreen(
                         Surface(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFF1F8E9),
-                            border = BorderStroke(1.dp, Color(0xFFDCEDC8))
+                            color = Color(0x22FFFFFF),
+                            border = BorderStroke(1.dp, Color(0x26FFFFFF))
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
                                     text = "Recebido",
                                     fontSize = 11.sp,
-                                    color = Color(0xFF33691E),
+                                    color = Color(0xCCFFF2F5),
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.receivedCents),
+                                    text = if (hideValues) "R$ •••••" else formatBrl(financeSummary.receivedCents),
                                     fontSize = 14.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFF2E7D32)
+                                    color = Color(0xFF7CE3A8)
                                 )
                             }
                         }
@@ -650,22 +699,22 @@ fun HomeScreen(
                         Surface(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(12.dp),
-                            color = Color(0xFFFFF8E1),
-                            border = BorderStroke(1.dp, Color(0xFFFFECB3))
+                            color = Color(0x22FFFFFF),
+                            border = BorderStroke(1.dp, Color(0x26FFFFFF))
                         ) {
                             Column(modifier = Modifier.padding(10.dp)) {
                                 Text(
                                     text = "A Receber",
                                     fontSize = 11.sp,
-                                    color = Color(0xFFF57F17),
+                                    color = Color(0xCCFFF2F5),
                                     fontWeight = FontWeight.Medium
                                 )
                                 Spacer(Modifier.height(4.dp))
                                 Text(
-                                    text = if (hideValues) "••••••" else formatBrl(financeSummary.pendingCents),
+                                    text = if (hideValues) "R$ •••••" else formatBrl(financeSummary.pendingCents),
                                     fontSize = 14.5.sp,
                                     fontWeight = FontWeight.Bold,
-                                    color = Color(0xFFB82B62)
+                                    color = Color(0xFFF7D98C)
                                 )
                             }
                         }
@@ -680,13 +729,13 @@ fun HomeScreen(
                         Text(
                             text = "${financeSummary.totalCount} atendimento${if (financeSummary.totalCount == 1) "" else "s"} (${financeSummary.pricedCount} com valor)",
                             fontSize = 11.5.sp,
-                            color = Color(0xFF8C5A60),
+                            color = Color(0xCCFFF2F5),
                             fontWeight = FontWeight.Medium
                         )
                         Text(
-                            text = "Ticket Médio: " + if (hideValues) "••••" else formatBrl(financeSummary.averageTicketCents),
+                            text = "Ticket Médio: " + if (hideValues) "R$ ••••" else formatBrl(financeSummary.averageTicketCents),
                             fontSize = 11.5.sp,
-                            color = Color(0xFF8C5A60),
+                            color = Color(0xCCFFF2F5),
                             fontWeight = FontWeight.SemiBold
                         )
                     }
@@ -957,7 +1006,7 @@ fun HomeScreen(
                             Icon(Icons.Outlined.Shield, contentDescription = null, tint = Color(0xFFB82B62), modifier = Modifier.size(16.dp))
                         }
                         Column {
-                            Text("Segurança e Backup (.json)", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
+                            Text("Segurança e Backup", fontWeight = FontWeight.Bold, fontSize = 13.sp, color = Color(0xFF5E2326))
                             val backupSubtitle = uiState.lastBackupTimeFormatted?.let { "Último: $it" } ?: "Nenhum backup realizado ainda"
                             Text(text = backupSubtitle, fontSize = 11.sp, color = Color.Gray)
                         }

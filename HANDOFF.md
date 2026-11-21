@@ -113,7 +113,8 @@ app/src/main/
     │   ├── bg_natal_clean.webp        # Fundo Natal Clean suave/vinho em 1080×1920 (~54 KB)
     │   ├── bg_natal_minimal.webp      # Fundo Natal Minimal champanhe/dourado em 1080×1920 (~30 KB)
     │   ├── bg_ano_novo_glam.webp      # Fundo Ano Novo Glam perolado/dourado em 1080×1920 (~21 KB)
-    │   └── bg_carnaval_glam.webp      # Fundo Carnaval Glam vinho/rosé em 1080×1920 (~50 KB)
+    │   ├── bg_carnaval_glam.webp      # Fundo Carnaval Glam vinho/rosé em 1080×1920 (~50 KB)
+    │   └── ic_belezura_mark.webp      # Ícone oficial da marca Belezura transparente (~56 KB)
     ├── font/                    # Fontes TrueType estáticas embutidas
     │   ├── cinzel_bold.ttf
     │   ├── fredoka_bold.ttf
@@ -393,6 +394,13 @@ Armazenado em `SharedPreferences` (`salu_calendar_prefs`) sob a chave `"promo_dr
   - **Privacidade Sagrada:** `CalendarRenderer.kt` renderiza estritamente os nomes de clientes nas artes exportadas dos Stories. Nenhum dado financeiro ou telefone vaza para a imagem.
   - **Persistência e Backup (`BackupManager.kt`, `CalendarViewModel.kt`):** Armazenamento seguro de `appointment_details_json` e `studio_finance_config_json` no `SharedPreferences` e round-trip completo com retrocompatibilidade estrita (`opt*`) no backup JSON.
   - **Testes Unitários:** `AppointmentModelsTest.kt`, `WhatsAppHelperTest.kt` e `BackupManagerTest.kt` cobrindo 100% dos novos fluxos e cálculos.
+- **Sprint D.2 (Refino Editorial da Home + Novo Ícone WebP + Identidade Belezura):**
+  - **Novo WebP da Marca (`res/drawable-nodpi/ic_belezura_mark.webp`):** Ícone oficial da identidade Belezura em alta fidelidade com transparência nativa (~56 KB).
+  - **Cabeçalho Editorial com Animação Luminosa Única (`HomeScreen.kt`):** Exibição da marca em 42.dp (`ContentScale.Fit`), tipografia premium em `Playfair Display Bold` (28.sp, 0.5.sp tracking) e efeito de brilho luminoso único na abertura via `Animatable(0f..1f)` em 2400 ms (`FastOutSlowInEasing`), deslizando paleta suave vinho/rosé/champanhe e estabilizando em vinho sólido (`#4A1223`). Subtítulo ajustado para 12.5.sp em `#7E626A`.
+  - **Superfícies Editorial e Fim das Sombras Pesadas:** Fundo geral em rosé-pérola suave (`#FBF6F7`). Cards "Mês Ativo" e "Radar Sazonal" com sombras pesadas removidas (`0.dp`), substituídas por superfícies limpas com bordas finas elegantes (`#EDD9E0` e `#ECCFD9`) e gradiente sutil no radar sazonal.
+  - **Botão de Exportação "Story":** Atualização do botão no card Mês Ativo de `"PNG"` para `"Story"` com ícone oficial `ic_instagram` (preservando 100% da ação de exportação).
+  - **Card "Meu Caixa" como Protagonista Editorial:** Container em gradiente vinho boutique (`#471222` -> `#6A1D35`) com cantos 20.dp e borda dourada sutil (`#D4B475` @ 38% alpha). Indicadores translúcidos (`Total Previsto` em branco, `Recebido` em verde-menta `#7CE3A8`, `A Receber` em ouro-champanhe `#F7D98C`), botão de olhinho em `#F5D99A`, pílula translúcida champanhe para Chave Pix e rodapé editorial em creme translúcido (`#CCFFF2F5`).
+  - **Micro-polimento da Base da Home:** Rótulo limpo `"Segurança e Backup"` (removendo `(.json)`) e padronização dos espaçamentos verticais (16.dp entre seções, 20.dp de padding interno nos cards principais).
 - **Suíte de Testes Automatizados:**
   - `WhatsAppHelperTest.kt`: Validação dos 3 templates de mensagem, formatação de dias da semana em pt-BR e higienização de nomes.
   - `PromoModelsTest.kt`: Validação dos 3 presets, round-trip completo de serialização JSON, tolerância a payloads corrompidos/vazios e limitação estrita de até 6 itens.
